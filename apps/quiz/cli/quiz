@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""quiz: play Portal Quiz in the terminal and manage its questions.
+
+  quiz play [--category C]      play a game (no 3D, just text)
+  quiz leaderboard              top scores
+  quiz categories               categories and how many questions each has
+  quiz questions [--category C] list questions (without answers; add --answers to show them)
+  quiz validate                 check content/questions.json for mistakes
+  quiz add [options]            add a question (asks for anything missing)
+
+play / leaderboard / categories use the API (QUIZ_API, default https://quiz.2haks.xyz).
+questions / validate / add read and edit content/questions.json (QUIZ_QUESTIONS).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(os.path.realpath(__file__)).parent.parent
+sys.path.insert(0, str(ROOT / "api"))
+
+from app.questions import NUM_CHOICES, QuestionError, load_bank, save_bank, validate_question  # noqa: E402
+
+DEFAULT_API = os.environ.get("QUIZ_API", "https://quiz.2haks.xyz").rstrip("/")
+DEFAULT_FILE = Path(os.environ.get("QUIZ_QUESTIONS", ROOT / "content" / "questions.json"))
+LETTERS = "ABCD"
+CHOICE_KEYS = {**{c: n for n, c in enumerate(LETTERS)}, **{str(n + 1): n for n in range(NUM_CHOICES)}}
+
+
+class CliError(Exception):
+    pass
+
+
+def call(api: str, path: str, body: dict | None = None):
+    data = None if body is None else json.dumps(body).encode()
+    req = urllib.request.Request(api + "/api" + path, data=data, method="GET" if body is None else "POST",
+                                 headers={"Content-Type": "application/json", "User-Agent": "quiz-cli/1"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.load(e).get("detail", e.reason)
+        except (ValueError, AttributeError):
+            detail = e.reason
+        if isinstance(detail, list):
+            detail = ", ".join(d.get("msg", "") for d in detail)
+        raise CliError(f"{e.code}: {detail}") from e
+    except urllib.error.URLError as e:
+        raise CliError(f"can't reach {api}: {e.reason}") from e
+
+
+# ---------- API commands ----------
+
+def cmd_play(args) -> None:
+    game = call(args.api, "/games", {"category": args.category})
+    rounds = game["rounds"]
+    score = 0
+    print(f"Portal Quiz! {len(rounds)} questions. Type A-D (or 1-4). Ctrl+C to quit.\n")
+    for i, r in enumerate(rounds):
+        print(f"Question {i + 1}/{len(rounds)} [{r['category']}]: {r['question']}")
+        for n, c in enumerate(r["choices"]):
+            print(f"  {LETTERS[n]}) {c}")
+        tried: set[int] = set()
+        while True:
+            raw = input("Your portal: ").strip().upper()
+            choice = CHOICE_KEYS.get(raw, -1)
+            if choice < 0:
+                print("  Type A, B, C or D.")
+                continue
+            if choice in tried:
+                print("  You already tried that one!")
+                continue
+            res = call(args.api, f"/games/{game['game_id']}/answer", {"round": i, "choice": choice})
+            score = res["score"]
+            if res["correct"]:
+                print(f"  ✅ Correct! +{res['points']}  (score {score})\n")
+                break
+            tried.add(choice)
+            print("  ❌ Not that one, try again!")
+    print(f"🎉 Finished! Final score: {score}")
+    name = input("Nickname for the leaderboard (Enter to skip): ").strip()
+    if name:
+        res = call(args.api, f"/games/{game['game_id']}/finish", {"name": name})
+        print(f"You're number {res['rank']} on the leaderboard! 🏆")
+
+
+def cmd_leaderboard(args) -> None:
+    rows = call(args.api, f"/leaderboard?limit={args.limit}")["leaderboard"]
+    if not rows:
+        print("No scores yet.")
+    for r in rows:
+        print(f"{r['rank']:>3}. {r['name']:<12} {r['score']:>5}  ({r['date']})")
+
+
+def cmd_categories(args) -> None:
+    for c in call(args.api, "/categories")["categories"]:
+        print(f"{c['name']:<24} {c['questions']} questions")
+
+
+# ---------- file commands ----------
+
+def cmd_questions(args) -> None:
+    for q in load_bank(args.file):
+        if args.category and q.category.casefold() != args.category.casefold():
+            continue
+        print(f"{q.id:<14} [{q.category}] {q.question}")
+        if args.answers:
+            print(" " * 15 + " | ".join(("*" if n == q.answer else "") + c for n, c in enumerate(q.choices)))
+
+
+def cmd_validate(args) -> None:
+    questions = load_bank(args.file)
+    print(f"OK: {len(questions)} questions in {args.file}")
+
+
+def ask(prompt: str, value: str | None, no_input: bool) -> str:
+    if value:
+        return value
+    if no_input:
+        raise CliError(f"missing {prompt}")
+    return input(f"{prompt}: ").strip()
+
+
+def cmd_add(args) -> None:
+    questions = load_bank(args.file)
+    category = ask("category", args.category, args.no_input)
+    text = ask("question", args.question, args.no_input)
+    choices = args.choice or []
+    if choices and len(choices) != NUM_CHOICES:
+        raise CliError(f"give --choice exactly {NUM_CHOICES} times")
+    if not choices:
+        if args.no_input:
+            raise CliError("missing --choice")
+        choices = [input(f"choice {LETTERS[n]}: ").strip() for n in range(NUM_CHOICES)]
+    answer = args.answer or ask("right answer (A-D)", None, args.no_input)
+    answer = answer.strip().upper()
+    if answer not in set(LETTERS):
+        raise CliError("the right answer must be A, B, C or D")
+
+    qid = args.id
+    if not qid:
+        prefix = re.sub(r"[^a-z0-9]+", "-", category.lower()).strip("-") or "q"
+        n = 1
+        taken = {q.id for q in questions}
+        while f"{prefix}-{n:02d}" in taken:
+            n += 1
+        qid = f"{prefix}-{n:02d}"
+
+    q = validate_question({"id": qid, "category": category, "question": text,
+                           "choices": choices, "answer": LETTERS.index(answer)})
+    if any(existing.id == q.id for existing in questions):
+        raise CliError(f"id '{q.id}' is already used")
+    save_bank(args.file, questions + [q])
+    print(f"Added {q.id}. The game picks it up straight away (no restart needed).")
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(prog="quiz", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--api", default=DEFAULT_API, help=f"API base URL (default {DEFAULT_API})")
+    p.add_argument("--file", type=Path, default=DEFAULT_FILE, help="questions.json to read/edit")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    s = sub.add_parser("play", help="play in the terminal")
+    s.add_argument("--category")
+    s.set_defaults(func=cmd_play)
+
+    s = sub.add_parser("leaderboard", help="top scores")
+    s.add_argument("--limit", type=int, default=10)
+    s.set_defaults(func=cmd_leaderboard)
+
+    sub.add_parser("categories", help="list categories").set_defaults(func=cmd_categories)
+
+    s = sub.add_parser("questions", help="list questions from the file")
+    s.add_argument("--category")
+    s.add_argument("--answers", action="store_true", help="show the right answer with a *")
+    s.set_defaults(func=cmd_questions)
+
+    sub.add_parser("validate", help="check the questions file").set_defaults(func=cmd_validate)
+
+    s = sub.add_parser("add", help="add a question")
+    s.add_argument("--id", help="default: <category>-NN")
+    s.add_argument("--category")
+    s.add_argument("--question")
+    s.add_argument("--choice", action="append", metavar="TEXT", help=f"repeat {NUM_CHOICES} times")
+    s.add_argument("--answer", metavar="A-D")
+    s.add_argument("--no-input", action="store_true", help="never ask; fail if something is missing")
+    s.set_defaults(func=cmd_add)
+
+    args = p.parse_args(argv)
+    try:
+        args.func(args)
+    except (CliError, QuestionError, OSError) as e:
+        print(f"quiz: {e}", file=sys.stderr)
+        return 1
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

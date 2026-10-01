@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Portal Quiz</title>
+  <meta name="description" content="A 3D quiz game: walk through the portal with the right answer.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="scene" aria-label="3D room with four answer portals"></canvas>
+
+  <div id="hud" hidden>
+    <div id="question-box">
+      <div id="round-info"></div>
+      <h1 id="question"></h1>
+      <ol id="choice-list" class="sr-only"></ol>
+    </div>
+    <div id="score-box">Score <strong id="score">0</strong></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <p id="help">WASD / arrows to walk · drag to look · or press 1-4</p>
+  </div>
+
+  <div id="touch" hidden>
+    <div class="pad">
+      <button data-key="forward" aria-label="Walk forward">▲</button>
+      <button data-key="left" aria-label="Turn left">◀</button>
+      <button data-key="back" aria-label="Walk back">▼</button>
+      <button data-key="right" aria-label="Turn right">▶</button>
+    </div>
+  </div>
+
+  <section id="start" class="panel">
+    <h1>🌀 Portal Quiz</h1>
+    <p>Walk through the portal with the <strong>right answer</strong>. Be quick for bonus points!</p>
+    <label for="category">Category</label>
+    <select id="category"><option value="">Everything</option></select>
+    <button id="start-btn" class="big">Start!</button>
+    <p id="start-error" class="error" role="alert"></p>
+    <h2>🏆 Top scores</h2>
+    <ol id="leaderboard" class="leaderboard"><li>Loading…</li></ol>
+  </section>
+
+  <section id="end" class="panel" hidden>
+    <h1>🎉 You did it!</h1>
+    <p class="final">Score: <strong id="final-score">0</strong></p>
+    <p id="final-detail"></p>
+    <form id="name-form">
+      <label for="name">Your nickname for the leaderboard (no real full names!)</label>
+      <input id="name" maxlength="12" autocomplete="off" required pattern="[A-Za-z0-9][A-Za-z0-9 _\-]*">
+      <button class="big" type="submit">Save my score</button>
+      <p id="name-error" class="error" role="alert"></p>
+    </form>
+    <button id="again-btn" class="big secondary">Play again</button>
+  </section>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+
+quiz.2haks.xyz {
+	encode zstd gzip
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8202
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8201
+	}
+}

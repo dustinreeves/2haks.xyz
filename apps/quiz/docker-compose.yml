@@ -1,0 +1,58 @@
+# Portal Quiz: https://quiz.2haks.xyz
+# Caddy runs on the host, so each service publishes on 127.0.0.1 only.
+# (Docker-published ports skip UFW, so never publish on 0.0.0.0.)
+
+name: quiz
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  networks: [web-proxy]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  api:
+    <<: *hardening
+    build: ./api
+    image: quiz-api:local
+    environment:
+      QUESTIONS_FILE: /content/questions.json
+      QUIZ_DB: /var/lib/quiz/quiz.db
+    volumes:
+      # Mount the folder, not the file, so CLI saves (which replace the file) are seen.
+      - ./content:/content:ro
+      # SQLite database (games + leaderboard). Owned by uid 10001 on the host.
+      - ./data:/var/lib/quiz
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8202:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    <<: *hardening
+    build: ./web
+    image: quiz-web:local
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8201:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  web-proxy:
+    external: true

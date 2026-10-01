@@ -1,0 +1,39 @@
+{
+  "questions": [
+    {"id": "space-01", "category": "Space", "question": "Which planet is closest to the Sun?", "choices": ["Mercury", "Venus", "Earth", "Mars"], "answer": 0},
+    {"id": "space-02", "category": "Space", "question": "Which planet is famous for its big rings?", "choices": ["Jupiter", "Saturn", "Neptune", "Mars"], "answer": 1},
+    {"id": "space-03", "category": "Space", "question": "What is the Sun?", "choices": ["A planet", "A moon", "A star", "A comet"], "answer": 2},
+    {"id": "space-04", "category": "Space", "question": "Which planet is called the Red Planet?", "choices": ["Venus", "Jupiter", "Uranus", "Mars"], "answer": 3},
+    {"id": "space-05", "category": "Space", "question": "What is the biggest planet in our solar system?", "choices": ["Jupiter", "Saturn", "Earth", "Neptune"], "answer": 0},
+    {"id": "space-06", "category": "Space", "question": "Who was the first person to walk on the Moon?", "choices": ["Yuri Gagarin", "Neil Armstrong", "Buzz Aldrin", "Sally Ride"], "answer": 1},
+    {"id": "space-07", "category": "Space", "question": "How many planets are in our solar system?", "choices": ["7", "9", "8", "10"], "answer": 2},
+    {"id": "space-08", "category": "Space", "question": "What pulls things down towards the ground?", "choices": ["Magnetism", "Wind", "Air", "Gravity"], "answer": 3},
+
+    {"id": "animals-01", "category": "Animals", "question": "What is the largest animal that has ever lived?", "choices": ["Blue whale", "T. rex", "Elephant", "Giraffe"], "answer": 0},
+    {"id": "animals-02", "category": "Animals", "question": "How many legs does a spider have?", "choices": ["6", "8", "10", "12"], "answer": 1},
+    {"id": "animals-03", "category": "Animals", "question": "What do you call a baby kangaroo?", "choices": ["Cub", "Kid", "Joey", "Pup"], "answer": 2},
+    {"id": "animals-04", "category": "Animals", "question": "Which animal is the fastest runner on land?", "choices": ["Lion", "Horse", "Ostrich", "Cheetah"], "answer": 3},
+    {"id": "animals-05", "category": "Animals", "question": "Which of these is a mammal?", "choices": ["Dolphin", "Shark", "Salmon", "Octopus"], "answer": 0},
+    {"id": "animals-06", "category": "Animals", "question": "How many hearts does an octopus have?", "choices": ["1", "3", "2", "8"], "answer": 1},
+    {"id": "animals-07", "category": "Animals", "question": "What does a caterpillar turn into?", "choices": ["A beetle", "A spider", "A butterfly", "A worm"], "answer": 2},
+    {"id": "animals-08", "category": "Animals", "question": "Which bird cannot fly?", "choices": ["Eagle", "Parrot", "Owl", "Penguin"], "answer": 3},
+
+    {"id": "maths-01", "category": "Maths", "question": "What is 7 × 8?", "choices": ["56", "54", "64", "48"], "answer": 0},
+    {"id": "maths-02", "category": "Maths", "question": "How many sides does a hexagon have?", "choices": ["5", "6", "7", "8"], "answer": 1},
+    {"id": "maths-03", "category": "Maths", "question": "What is half of 50?", "choices": ["20", "30", "25", "15"], "answer": 2},
+    {"id": "maths-04", "category": "Maths", "question": "What is 100 − 37?", "choices": ["73", "67", "53", "63"], "answer": 3},
+    {"id": "maths-05", "category": "Maths", "question": "How many minutes are in one hour?", "choices": ["60", "100", "24", "30"], "answer": 0},
+    {"id": "maths-06", "category": "Maths", "question": "Which number is a prime number?", "choices": ["9", "13", "15", "21"], "answer": 1},
+    {"id": "maths-07", "category": "Maths", "question": "What is 12 + 19?", "choices": ["29", "32", "31", "41"], "answer": 2},
+    {"id": "maths-08", "category": "Maths", "question": "How many corners does a cube have?", "choices": ["4", "6", "12", "8"], "answer": 3},
+
+    {"id": "games-01", "category": "Games", "question": "In Minecraft, what do you need to make a Nether portal frame?", "choices": ["Obsidian", "Cobblestone", "Diamond blocks", "Glass"], "answer": 0},
+    {"id": "games-02", "category": "Games", "question": "In Minecraft, which mob explodes when it gets close to you?", "choices": ["Zombie", "Creeper", "Skeleton", "Enderman"], "answer": 1},
+    {"id": "games-03", "category": "Games", "question": "In chess, which piece can only move diagonally?", "choices": ["Rook", "Knight", "Bishop", "King"], "answer": 2},
+    {"id": "games-04", "category": "Games", "question": "What colour is Pac-Man?", "choices": ["Red", "Blue", "Green", "Yellow"], "answer": 3},
+    {"id": "games-05", "category": "Games", "question": "How many squares are on a chess board?", "choices": ["64", "36", "100", "81"], "answer": 0},
+    {"id": "games-06", "category": "Games", "question": "In Minecraft, which item do you use to tame a wolf?", "choices": ["Fish", "Bone", "Carrot", "Wheat"], "answer": 1},
+    {"id": "games-07", "category": "Games", "question": "In Minecraft, what does an Enderman hate you doing?", "choices": ["Jumping", "Mining", "Looking at its eyes", "Sleeping"], "answer": 2},
+    {"id": "games-08", "category": "Games", "question": "How many dots are on a normal six-sided dice in total?", "choices": ["18", "36", "24", "21"], "answer": 3}
+  ]
+}
