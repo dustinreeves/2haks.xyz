@@ -243,7 +243,7 @@ const KEYMAP = {
 };
 
 window.addEventListener("keydown", (e) => {
-  if (state.mode !== "playing" || e.target.closest("input, select, textarea")) return;
+  if (state.mode !== "playing" || (e.target instanceof Element && e.target.closest("input, select, textarea"))) return;
   if (KEYMAP[e.code]) {
     held.add(KEYMAP[e.code]);
     e.preventDefault();
@@ -359,6 +359,14 @@ function toast(text, kind) {
   toastTimer = setTimeout(() => { t.className = ""; }, 1300);
 }
 
+// Push the player back far enough to see all four portals again.
+function bounceBack() {
+  player.pos.z = Math.max(player.pos.z, PORTAL_Z + 7);
+  player.yaw = 0;
+  player.pitch = -0.05;
+  held.clear();
+}
+
 let warp = 0; // seconds left of the "whoosh" effect after a right answer
 const WARP_TIME = 0.6;
 
@@ -386,12 +394,11 @@ async function choose(i) {
     } else {
       toast("Not that one! Try again", "bad");
       closePortal(i);
-      // Bounce the player back from the portal.
-      player.pos.z = PORTAL_Z + 3.5;
+      bounceBack();
     }
   } catch (err) {
     toast(err.message, "bad");
-    player.pos.z = PORTAL_Z + 3.5;
+    bounceBack();
   } finally {
     state.busy = false;
   }

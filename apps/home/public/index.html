@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2haks</title>
+  <meta name="description" content="A dad and his kid making goofy AI-built video games and tools.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect width='8' height='8' fill='%23ff4f9a'/%3E%3Cpath d='M2 2h1v1H2zM5 2h1v1H5zM2 5h4v1H2z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <h1 class="logo" aria-label="2haks">2<span>haks</span></h1>
+    <p class="tagline">A dad and his kid making goofy AI&nbsp;slop.</p>
+    <p class="intro">
+      We're <strong>Dustin</strong> and <strong>Tripp</strong>, a father–son duo.
+      We think up silly video games and handy little tools, get an AI to help build them,
+      and put them online here the same day. Most of them are ridiculous.
+      Some of them even work.
+    </p>
+    <a class="button" href="#stuff">See the stuff ↓</a>
+  </header>
+
+  <main>
+    <section id="stuff">
+      <h2>The stuff</h2>
+      <p class="muted">Everything we've made so far, newest first. Click one to play it.</p>
+      <div id="apps" class="grid" aria-live="polite">
+        <p class="muted">Loading…</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li><strong>Come up with an idea.</strong> Usually a dumb one. “What if you played the <em>boss</em>?”</li>
+        <li><strong>Build it with an AI.</strong> We describe it, Claude writes most of the code, and we argue about the details.</li>
+        <li><strong>Play it, break it, fix it.</strong> Then it goes live on its own <code>something.2haks.xyz</code> address.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Made by Dustin &amp; Tripp ·
+      <a href="https://projects.2haks.xyz">Every project, with API docs</a> ·
+      <a href="https://github.com/dustinreeves/2haks.xyz">All the code on GitHub</a>
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

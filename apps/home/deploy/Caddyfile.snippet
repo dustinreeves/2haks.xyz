@@ -1,0 +1,18 @@
+
+2haks.xyz {
+	encode zstd gzip
+
+	# The homepage lists apps from the showcase API (read-only).
+	handle /api/projects* {
+		reverse_proxy 127.0.0.1:8002
+	}
+
+	handle {
+		root * /opt/apps/home/public
+		file_server
+	}
+}
+
+www.2haks.xyz {
+	redir https://2haks.xyz{uri} permanent
+}
