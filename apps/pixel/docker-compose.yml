@@ -1,0 +1,20 @@
+services:
+  pixel:
+    build: .
+    image: pixel:latest
+    container_name: pixel
+    restart: unless-stopped
+    # Only reachable from the server itself; Caddy forwards pixel.2haks.xyz here.
+    ports:
+      - "127.0.0.1:8101:8000"
+    volumes:
+      - pixel-data:/data
+    networks:
+      - web-proxy
+
+volumes:
+  pixel-data:
+
+networks:
+  web-proxy:
+    external: true

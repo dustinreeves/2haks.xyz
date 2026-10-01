@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""bossbuilder: look at shared Boss Builder levels from the terminal.
+
+  bossbuilder health              is the API up?
+  bossbuilder list [-n 20]        recently shared levels
+  bossbuilder show CODE           draw a level as text art
+  bossbuilder get CODE [-o FILE]  save a level as JSON
+  bossbuilder validate FILE       check a level JSON file against the rules
+
+Uses BOSSBUILDER_API (default https://bossbuilder.2haks.xyz). Standard library only.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(os.path.realpath(__file__)).parent.parent
+sys.path.insert(0, str(ROOT / "api"))
+
+from app.levels import LevelError, normalize_code, validate_level  # noqa: E402
+
+DEFAULT_API = os.environ.get("BOSSBUILDER_API", "https://bossbuilder.2haks.xyz").rstrip("/")
+
+BOSS_NAMES = {"slime_king": "Slime King", "fire_golem": "Fire Golem", "shadow_dragon": "Shadow Dragon"}
+
+# tile -> (character to print, ANSI colour)
+ART = {
+    ".": (" ", None), "#": ("█", "90"), "^": ("▲", "37"), "~": ("≈", "31"),
+    "s": ("o", "32"), "b": ("v", "35"), "c": ("C", "33"),
+    "S": ("D", "33;1"), "F": ("F", "32;1"), "K": ("K", "35;1"),
+}
+LEGEND = "█ block  ▲ spikes  ≈ lava  o slime  v bat  C cannon  D hero door  F flag  K boss"
+
+
+class CliError(Exception):
+    pass
+
+
+def fetch(api: str, path: str):
+    url = api + path
+    req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "bossbuilder-cli"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.load(e).get("detail", e.reason)
+        except (ValueError, AttributeError):
+            detail = e.reason
+        raise CliError(f"{e.code}: {detail}") from None
+    except (urllib.error.URLError, TimeoutError) as e:
+        raise CliError(f"could not reach {url}: {getattr(e, 'reason', e)}") from None
+
+
+def code_arg(code: str) -> str:
+    normalized = normalize_code(code)
+    if not normalized:
+        raise CliError(f"'{code}' is not a level code (6 letters and numbers)")
+    return normalized
+
+
+def draw(level: dict, color: bool) -> str:
+    lines = []
+    for row in level["tiles"]:
+        out = []
+        for c in row:
+            ch, ansi = ART[c]
+            out.append(f"\033[{ansi}m{ch}\033[0m" if color and ansi else ch)
+        lines.append("".join(out).rstrip() if not color else "".join(out))
+    return "\n".join(lines)
+
+
+def cmd_health(args) -> None:
+    data = fetch(args.api, "/api/health")
+    print(f"{data['status']}: {data['levels']} shared level(s)")
+
+
+def cmd_list(args) -> None:
+    levels = fetch(args.api, f"/api/levels?limit={args.n}")["levels"]
+    if args.json:
+        print(json.dumps(levels, indent=2))
+        return
+    if not levels:
+        print("No shared levels yet.")
+        return
+    for lv in levels:
+        print(f"{lv['code']}  {lv['created_at'][:10]}  {BOSS_NAMES.get(lv['boss'], lv['boss']):<13}  {lv['name']}")
+
+
+def cmd_show(args) -> None:
+    data = fetch(args.api, "/api/levels/" + urllib.parse.quote(code_arg(args.code)))
+    color = sys.stdout.isatty() and not args.no_color and "NO_COLOR" not in os.environ
+    print(f"{data['name']}  ({data['code']}, boss: {BOSS_NAMES.get(data['boss'], data['boss'])})")
+    print(draw(data["level"], color))
+    print(LEGEND)
+
+
+def cmd_get(args) -> None:
+    data = fetch(args.api, "/api/levels/" + urllib.parse.quote(code_arg(args.code)))
+    text = json.dumps(data["level"], indent=2) + "\n"
+    if args.output:
+        Path(args.output).write_text(text, encoding="utf-8")
+        print(f"Saved '{data['name']}' to {args.output}")
+    else:
+        sys.stdout.write(text)
+
+
+def cmd_validate(args) -> None:
+    try:
+        level = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    except OSError as e:
+        raise CliError(f"cannot read {args.file}: {e.strerror}") from None
+    except json.JSONDecodeError as e:
+        raise CliError(f"{args.file} is not valid JSON (line {e.lineno}): {e.msg}") from None
+    validate_level(level)
+    print(f"OK: {args.file} is a valid level. (The fairness check runs in the game.)")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="bossbuilder", description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--api", default=DEFAULT_API, help="API base URL (default: %(default)s)")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("health", help="check the API").set_defaults(func=cmd_health)
+
+    p = sub.add_parser("list", help="recently shared levels")
+    p.add_argument("-n", type=int, default=20, choices=range(1, 51), metavar="1-50", help="how many (default 20)")
+    p.add_argument("--json", action="store_true", help="print raw JSON")
+    p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("show", help="draw a level as text art")
+    p.add_argument("code")
+    p.add_argument("--no-color", action="store_true", help="plain text, no colours")
+    p.set_defaults(func=cmd_show)
+
+    p = sub.add_parser("get", help="save a level as JSON")
+    p.add_argument("code")
+    p.add_argument("-o", "--output", help="file to write (default: print it)")
+    p.set_defaults(func=cmd_get)
+
+    p = sub.add_parser("validate", help="check a level JSON file")
+    p.add_argument("file")
+    p.set_defaults(func=cmd_validate)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        args.func(args)
+    except (CliError, LevelError) as e:
+        print(f"bossbuilder: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boss Builder</title>
+  <meta name="description" content="Build a level, become the boss, and stop the hero horde.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%91%91%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/js/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">👑 Boss Builder</h1>
+    <div class="stats">
+      <span class="stat coins" title="Golden coins">🪙 <b id="coins">0</b></span>
+      <span class="stat" title="Current wave">Wave <b id="wave">1</b></span>
+    </div>
+    <nav class="actions" id="build-actions">
+      <button type="button" id="btn-shop">🛒 Shop</button>
+      <button type="button" id="btn-share">🔗 Share</button>
+      <button type="button" id="btn-help" aria-label="How to play">❓</button>
+      <button type="button" id="btn-start" class="primary">⚔️ Start wave</button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="stage" id="stage">
+      <canvas id="game" aria-label="Game area"></canvas>
+
+      <div class="hud" id="play-hud" hidden>
+        <span id="hud-hearts" aria-label="Boss health"></span>
+        <span id="hud-heroes"></span>
+        <span id="hud-coins"></span>
+        <label class="auto"><input type="checkbox" id="auto-boss"> 🤖 Auto boss</label>
+        <button type="button" id="btn-stop" class="small">✋ End wave</button>
+      </div>
+      <p class="hint" id="play-hint" hidden></p>
+
+      <div class="touch" id="touch" hidden>
+        <div class="pad">
+          <button type="button" data-key="left" aria-label="Left">◀</button>
+          <button type="button" data-key="right" aria-label="Right">▶</button>
+        </div>
+        <div class="pad">
+          <button type="button" data-key="down" aria-label="Down" id="touch-down">▼</button>
+          <button type="button" data-key="up" aria-label="Jump">▲</button>
+          <button type="button" data-key="attack" aria-label="Attack" class="attack">💥</button>
+        </div>
+      </div>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <section class="build-bar" id="build-bar" aria-label="Level builder">
+      <div class="palette" id="palette" role="toolbar" aria-label="Tiles"></div>
+      <div class="build-tools">
+        <div class="budget" title="Trap points used">
+          <span>Trap points</span>
+          <div class="meter"><div id="budget-fill"></div></div>
+          <b id="budget-text">0 / 20</b>
+        </div>
+        <label class="boss-pick">Boss
+          <select id="boss-select"></select>
+        </label>
+        <button type="button" id="btn-route" aria-pressed="false">👣 Show route</button>
+        <button type="button" id="btn-undo">↩️ Undo</button>
+        <button type="button" id="btn-clear">🧹 New level</button>
+      </div>
+      <input type="range" id="scroll" min="0" max="100" value="0" step="0.1" aria-label="Scroll the level">
+      <p class="route-status" id="route-status"></p>
+    </section>
+  </main>
+
+  <dialog id="dlg-shop" aria-labelledby="shop-title">
+    <form method="dialog" class="dlg">
+      <h2 id="shop-title">🛒 Shop <span class="coins-pill">🪙 <b id="shop-coins">0</b></span></h2>
+      <h3>Unlock</h3>
+      <div class="shop-grid" id="shop-unlocks"></div>
+      <h3>Upgrades</h3>
+      <div class="shop-grid" id="shop-upgrades"></div>
+      <div class="dlg-actions"><button value="close" class="primary">Done</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-share" aria-labelledby="share-title">
+    <form method="dialog" class="dlg">
+      <h2 id="share-title">🔗 Share levels</h2>
+      <p>Share your level and get a code. Friends can type the code to play your level as their boss.</p>
+      <div class="row">
+        <button type="button" id="btn-do-share" class="primary">Share my level</button>
+        <span id="share-result" class="share-result"></span>
+      </div>
+      <h3>Play a shared level</h3>
+      <div class="row">
+        <input id="code-input" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Level code">
+        <button type="button" id="btn-load-code">Load</button>
+      </div>
+      <h3>Recently shared</h3>
+      <ul class="recent" id="recent-list"><li class="muted">Loading…</li></ul>
+      <div class="dlg-actions"><button value="close">Close</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-results" aria-labelledby="results-title">
+    <form method="dialog" class="dlg results">
+      <h2 id="results-title"></h2>
+      <p id="results-text"></p>
+      <div class="result-stats">
+        <div><b id="res-defeated">0</b><span>stopped</span></div>
+        <div><b id="res-escaped">0</b><span>escaped</span></div>
+        <div class="gold"><b id="res-coins">0</b><span>🪙 earned</span></div>
+      </div>
+      <div class="dlg-actions"><button value="close" class="primary">Back to building</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-help" aria-labelledby="help-title">
+    <form method="dialog" class="dlg">
+      <h2 id="help-title">👑 How to play</h2>
+      <ol class="help">
+        <li><b>Build</b> a level. Pick a tile below the game and click or tap to place it. Right-click erases.</li>
+        <li><b>Start the wave.</b> A horde of heroes runs from the 🚪 door to the 🚩 flag.</li>
+        <li><b>You are the boss!</b> Move with <kbd>←</kbd> <kbd>→</kbd> (or <kbd>A</kbd> <kbd>D</kbd>), jump with <kbd>↑</kbd> / <kbd>W</kbd>, attack with <kbd>Space</kbd>. Heroes who land on your head hurt you! After squishing a hero, your boss needs a moment to recover (it looks see-through), so use attacks and traps too.</li>
+        <li>Every hero you stop gives you <b>5 🪙 golden coins</b>. Spend them in the shop on new traps, new bosses and upgrades.</li>
+        <li>Stop more than half the heroes to win the wave. Each wave brings more, and smarter, heroes.</li>
+      </ol>
+      <p class="muted">Levels must be fair: heroes need a possible way to reach the flag. Use 👣 Show route to see it.</p>
+      <div class="dlg-actions"><button value="close" class="primary">Let's go!</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

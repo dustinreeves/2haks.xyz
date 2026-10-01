@@ -1,0 +1,15 @@
+
+bossbuilder.2haks.xyz {
+	encode zstd gzip
+
+	handle /api/* {
+		request_body {
+			max_size 32KB
+		}
+		reverse_proxy 127.0.0.1:8103
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8102
+	}
+}

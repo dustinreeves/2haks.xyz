@@ -1,0 +1,59 @@
+# Boss Builder: https://bossbuilder.2haks.xyz
+# Caddy runs on the host, so each service publishes on 127.0.0.1 only.
+# (Docker-published ports skip UFW, so never publish on 0.0.0.0.)
+# Ports are registered in /opt/apps/PORTS.md.
+
+name: bossbuilder
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: [/tmp]
+  networks: [web-proxy]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  api:
+    <<: *hardening
+    build: ./api
+    image: bossbuilder-api:local
+    environment:
+      LEVELS_DB: /data/levels.db
+      MAX_LEVELS: "5000"
+      SHARES_PER_HOUR: "20"
+    volumes:
+      - levels:/data
+    ports:
+      - "127.0.0.1:8103:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    <<: *hardening
+    build: ./web
+    image: bossbuilder-web:local
+    ports:
+      - "127.0.0.1:8102:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  levels:
+
+networks:
+  web-proxy:
+    external: true

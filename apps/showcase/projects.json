@@ -1,0 +1,61 @@
+{
+  "projects": [
+    {
+      "slug": "showcase",
+      "name": "2haks Projects",
+      "launch_date": "2026-10-01",
+      "url": "https://projects.2haks.xyz",
+      "description": "The home page for every app Dustin and Tripp build on 2haks.xyz. Each app gets a card showing what it does and how to use its API and CLI.",
+      "author": "Co-authored",
+      "examples": {
+        "api": [
+          "curl https://projects.2haks.xyz/api/projects",
+          "curl https://projects.2haks.xyz/api/projects/showcase"
+        ],
+        "cli": [
+          "showcase list",
+          "showcase show showcase",
+          "showcase add"
+        ]
+      }
+    },
+    {
+      "slug": "pixel",
+      "name": "Pixel",
+      "launch_date": "2026-10-01",
+      "url": "https://pixel.2haks.xyz",
+      "description": "Draw pixel art on a 20×20 or 40×40 grid with pencil, fill, colour picker and select-and-move tools, then save it to a shared gallery or download it as a PNG.",
+      "author": "Dustin",
+      "examples": {
+        "api": [
+          "curl https://pixel.2haks.xyz/api/drawings",
+          "curl -o art.png \"https://pixel.2haks.xyz/api/drawings/<id>/png?scale=16\""
+        ],
+        "cli": [
+          "python cli/pixel.py list",
+          "python cli/pixel.py show <id>",
+          "python cli/pixel.py export <id> art.png --scale 20"
+        ]
+      }
+    },
+    {
+      "slug": "bossbuilder",
+      "name": "Boss Builder",
+      "launch_date": "2026-10-01",
+      "url": "https://bossbuilder.2haks.xyz",
+      "description": "A 2D platformer where you play the boss! Build a trap-filled level, then stop the horde of AI heroes racing for the flag and earn golden coins for new traps, bosses and upgrades.",
+      "author": "Co-authored",
+      "examples": {
+        "api": [
+          "curl https://bossbuilder.2haks.xyz/api/levels",
+          "curl https://bossbuilder.2haks.xyz/api/levels/CODE"
+        ],
+        "cli": [
+          "bossbuilder list",
+          "bossbuilder show CODE",
+          "bossbuilder get CODE -o level.json"
+        ]
+      }
+    }
+  ]
+}

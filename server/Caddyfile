@@ -1,0 +1,39 @@
+# 2haks.xyz: one block per app. Ports are listed in /opt/apps/PORTS.md.
+# Add your block below; never replace the whole file.
+# Validate before reloading:
+#   sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+
+:80 {
+	root * /usr/share/caddy
+	file_server
+}
+
+projects.2haks.xyz {
+	encode zstd gzip
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8002
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8001
+	}
+}
+
+pixel.2haks.xyz {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8101
+}
+
+bossbuilder.2haks.xyz {
+	encode zstd gzip
+
+	handle /api/* {
+		request_body {
+			max_size 32KB
+		}
+		reverse_proxy 127.0.0.1:8103
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8102
+	}
+}

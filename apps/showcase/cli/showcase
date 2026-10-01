@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""showcase: look at and add cards on https://projects.2haks.xyz
+
+  showcase list                 all cards (from the live API)
+  showcase show <slug>          one card
+  showcase validate             check projects.json for mistakes
+  showcase add [options]        add a card to projects.json (asks for anything missing)
+
+Reading uses the API (SHOWCASE_API, default https://projects.2haks.xyz).
+Pass --local to read projects.json directly instead.
+Writing always edits projects.json (SHOWCASE_FILE, default next to this repo).
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(os.path.realpath(__file__)).parent.parent
+sys.path.insert(0, str(ROOT / "api"))
+
+from app.cards import AUTHORS, CardError, load_projects, save_projects, validate_card  # noqa: E402
+
+DEFAULT_API = os.environ.get("SHOWCASE_API", "https://projects.2haks.xyz").rstrip("/")
+DEFAULT_FILE = Path(os.environ.get("SHOWCASE_FILE", ROOT / "projects.json"))
+
+
+class CliError(Exception):
+    pass
+
+
+# ---------- reading ----------
+
+def fetch(api: str, path: str):
+    url = api + path
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.load(e).get("detail", e.reason)
+        except (ValueError, AttributeError):
+            detail = e.reason
+        raise CliError(f"{url}: {e.code} {detail}") from None
+    except (urllib.error.URLError, TimeoutError) as e:
+        reason = getattr(e, "reason", e)
+        raise CliError(f"could not reach {url}: {reason}  (try --local)") from None
+
+
+def get_projects(args) -> list[dict]:
+    if args.local:
+        projects = load_projects(args.file)
+        return sorted(projects, key=lambda p: (p["launch_date"], p["name"]), reverse=True)
+    return fetch(args.api, "/api/projects")["projects"]
+
+
+def get_project(args, slug: str) -> dict:
+    if args.local:
+        for project in load_projects(args.file):
+            if project["slug"] == slug:
+                return project
+        raise CliError(f"no project called '{slug}'")
+    return fetch(args.api, "/api/projects/" + urllib.parse.quote(slug, safe=""))
+
+
+def print_card(p: dict) -> None:
+    print(f"{p['name']}  ({p['slug']})")
+    print(f"  URL:       {p['url']}")
+    print(f"  Launched:  {p['launch_date']}")
+    print(f"  Author:    {p['author']}")
+    print(f"  About:     {p['description']}")
+    for kind, label in (("api", "API"), ("cli", "CLI")):
+        if p["examples"][kind]:
+            print(f"  {label} examples:")
+            for ex in p["examples"][kind]:
+                print(f"    $ {ex}")
+
+
+def cmd_list(args) -> None:
+    projects = get_projects(args)
+    if args.json:
+        print(json.dumps({"projects": projects}, indent=2, ensure_ascii=False))
+        return
+    if not projects:
+        print("No cards yet.")
+        return
+    width = max(len(p["slug"]) for p in projects)
+    for p in projects:
+        print(f"{p['slug']:<{width}}  {p['launch_date']}  {p['author']:<11}  {p['name']}")
+
+
+def cmd_show(args) -> None:
+    project = get_project(args, args.slug)
+    if args.json:
+        print(json.dumps(project, indent=2, ensure_ascii=False))
+    else:
+        print_card(project)
+
+
+def cmd_validate(args) -> None:
+    projects = load_projects(args.file)
+    print(f"OK: {args.file} has {len(projects)} valid card(s).")
+
+
+# ---------- writing ----------
+
+def ask(prompt: str, default: str | None = None) -> str:
+    suffix = f" [{default}]" if default else ""
+    while True:
+        try:
+            answer = input(f"{prompt}{suffix}: ").strip()
+        except EOFError:
+            raise CliError("stopped: no answer given") from None
+        if answer:
+            return answer
+        if default:
+            return default
+
+
+def ask_list(prompt: str) -> list[str]:
+    print(f"{prompt} (one per line, empty line to finish):")
+    items = []
+    while True:
+        try:
+            line = input("  > ").strip()
+        except EOFError:
+            break
+        if not line:
+            break
+        items.append(line)
+    return items
+
+
+def cmd_add(args) -> None:
+    interactive = sys.stdin.isatty() and not args.no_input
+    today = dt.date.today().isoformat()
+
+    def value(name: str, prompt: str, default: str | None = None) -> str:
+        current = getattr(args, name)
+        if current is not None:
+            return current
+        if interactive:
+            return ask(prompt, default)
+        if default is not None:
+            return default
+        raise CliError(f"--{name.replace('_', '-')} is required (or run in a terminal to be asked)")
+
+    slug = value("slug", "Slug (short id, like my-app)")
+    card = {
+        "slug": slug,
+        "name": value("name", "Name"),
+        "launch_date": value("launch_date", "Launch date", today),
+        "url": value("url", "URL", f"https://{slug}.2haks.xyz"),
+        "description": value("description", "Description (1-2 sentences)"),
+        "author": value("author", f"Author ({', '.join(AUTHORS)})"),
+        "examples": {"api": args.api_example or [], "cli": args.cli_example or []},
+    }
+    if interactive and not args.api_example and not args.cli_example:
+        card["examples"]["api"] = ask_list("API examples")
+        card["examples"]["cli"] = ask_list("CLI examples")
+
+    validate_card(card)
+    projects = load_projects(args.file)
+    if any(p["slug"] == card["slug"] for p in projects):
+        raise CliError(f"a card called '{card['slug']}' already exists")
+    projects.append(card)
+    save_projects(args.file, projects)
+
+    print(f"Added '{card['name']}' to {args.file}. The website shows it right away.")
+    print("Remember to save it in Git:")
+    print(f"  git -C {args.file.parent} add {args.file.name} && "
+          f"git -C {args.file.parent} commit -m 'Add {card['slug']} card'")
+
+
+# ---------- main ----------
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="showcase", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--api", default=DEFAULT_API, help="API base URL (default: %(default)s)")
+    parser.add_argument("--file", type=Path, default=DEFAULT_FILE, help="projects.json path (default: %(default)s)")
+    parser.add_argument("--local", action="store_true", help="read projects.json instead of the API")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("list", help="list all cards")
+    p.add_argument("--json", action="store_true", help="print raw JSON")
+    p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("show", help="show one card")
+    p.add_argument("slug")
+    p.add_argument("--json", action="store_true", help="print raw JSON")
+    p.set_defaults(func=cmd_show)
+
+    p = sub.add_parser("validate", help="check projects.json")
+    p.set_defaults(func=cmd_validate)
+
+    p = sub.add_parser("add", help="add a card to projects.json")
+    p.add_argument("--slug")
+    p.add_argument("--name")
+    p.add_argument("--launch-date", dest="launch_date", help="YYYY-MM-DD (default: today)")
+    p.add_argument("--url", help="default: https://<slug>.2haks.xyz")
+    p.add_argument("--description")
+    p.add_argument("--author", choices=AUTHORS)
+    p.add_argument("--api-example", action="append", metavar="CMD", help="repeat for more than one")
+    p.add_argument("--cli-example", action="append", metavar="CMD", help="repeat for more than one")
+    p.add_argument("--no-input", action="store_true", help="never ask questions; fail if something is missing")
+    p.set_defaults(func=cmd_add)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        args.func(args)
+    except (CliError, CardError) as e:
+        print(f"showcase: {e}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print(file=sys.stderr)
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,263 @@
+:root {
+  --bg: #0d0a1c;
+  --panel: #1b1533;
+  --panel-2: #251d45;
+  --border: #3a2f66;
+  --text: #f1edff;
+  --muted: #a99fcf;
+  --accent: #facc15;
+  --accent-text: #1a1300;
+  --danger: #f87171;
+  --radius: 12px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+button, select, input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+button.small { padding: 4px 10px; font-size: 0.85rem; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+[hidden] { display: none !important; }
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.brand { margin: 0; font-size: 1.25rem; letter-spacing: 0.01em; }
+.stats { display: flex; gap: 12px; }
+.stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px; }
+.stat.coins b { color: var(--accent); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+/* ---------- stage ---------- */
+
+main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  max-height: calc(100vh - 230px);
+  aspect-ratio: auto;
+}
+body.playing .stage { max-height: none; }
+#game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+.hud {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.hud > * {
+  background: rgba(13, 10, 28, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  pointer-events: auto;
+}
+.hud .auto { margin-left: auto; cursor: pointer; user-select: none; }
+#hud-hearts { letter-spacing: -2px; }
+
+.hint {
+  position: absolute;
+  left: 50%;
+  top: 52px;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: calc(100% - 32px);
+  background: rgba(13, 10, 28, 0.85);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  text-align: center;
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translate(-50%, 20px);
+  max-width: calc(100% - 32px);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- touch controls ---------- */
+
+.touch {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.touch .pad { display: flex; gap: 8px; pointer-events: auto; }
+.touch button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  background: rgba(37, 29, 69, 0.8);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch button.down { background: var(--accent); color: var(--accent-text); }
+.touch .attack { background: rgba(220, 38, 38, 0.8); }
+
+/* ---------- build bar ---------- */
+
+.build-bar {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 8px 16px 10px;
+  display: grid;
+  gap: 8px;
+}
+.palette { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.tile-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 68px;
+  padding: 6px 6px 4px;
+  font-size: 0.75rem;
+}
+.tile-btn canvas { width: 32px; height: 32px; }
+.tile-btn[aria-pressed="true"] { border-color: var(--accent); background: #3a2d10; box-shadow: 0 0 0 2px var(--accent) inset; }
+.tile-btn.locked canvas, .tile-btn.locked span { opacity: 0.35; }
+.tile-btn .cost {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+.tile-btn .lock { font-size: 0.7rem; color: var(--accent); }
+
+.build-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.budget { display: flex; align-items: center; gap: 8px; }
+.budget span { color: var(--muted); }
+.meter { width: 120px; height: 10px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+#budget-fill { height: 100%; width: 0; background: linear-gradient(90deg, #22c55e, var(--accent), #ef4444); }
+.boss-pick { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.boss-pick select { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; color: var(--text); }
+#btn-route[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+#scroll { width: 100%; accent-color: var(--accent); }
+.route-status { margin: 0; color: var(--danger); min-height: 0; }
+.route-status:empty { display: none; }
+
+/* ---------- dialogs ---------- */
+
+dialog {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0;
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+}
+dialog::backdrop { background: rgba(5, 3, 15, 0.7); }
+.dlg { padding: 20px; display: grid; gap: 12px; }
+.dlg h2 { margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dlg h3 { margin: 6px 0 0; font-size: 0.95rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.dlg p { margin: 0; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.muted { color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.coins-pill { font-size: 0.95rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 12px; }
+.coins-pill b { color: var(--accent); }
+
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); gap: 10px; }
+.shop-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.shop-card p { color: var(--muted); font-size: 0.85rem; flex: 1; }
+
+#code-input {
+  width: 9ch;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-family: ui-monospace, Consolas, monospace;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 10px;
+}
+.share-result { color: var(--muted); }
+.big-code { font-size: 1.3rem; color: var(--accent); letter-spacing: 0.1em; }
+.recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.recent li { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border-radius: 10px; padding: 6px 10px; }
+.recent li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent code { color: var(--accent); }
+
+.results { text-align: center; }
+.results h2 { justify-content: center; font-size: 1.6rem; }
+.result-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.result-stats div { background: var(--panel-2); border-radius: var(--radius); padding: 12px 6px; display: flex; flex-direction: column; }
+.result-stats b { font-size: 1.8rem; }
+.result-stats .gold b { color: var(--accent); }
+.results .dlg-actions { justify-content: center; }
+
+.help { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+kbd { background: var(--panel-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; font-size: 0.85em; }
+
+@media (max-width: 600px) {
+  .topbar { padding: 8px 12px; }
+  .brand { font-size: 1.05rem; }
+  .actions { margin-left: 0; width: 100%; }
+  .actions button { flex: 1; padding: 7px 6px; }
+  .build-bar { padding: 8px 12px; }
+  .stage { max-height: calc(100vh - 300px); }
+}

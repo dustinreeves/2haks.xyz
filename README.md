@@ -11,6 +11,11 @@ because the next sync will overwrite your changes.
 ## Apps
 
 <!-- apps:start -->
+| App | Live at | By | What it is | Last commit |
+|---|---|---|---|---|
+| [Boss Builder](apps/bossbuilder/) | [bossbuilder.2haks.xyz](https://bossbuilder.2haks.xyz) | Co-authored | A 2D platformer where you play the boss! Build a trap-filled level, then stop the horde of AI heroes racing for the flag and earn golden coins for new traps, bosses and upgrades. | `9945c81` 2026-10-01, Tripp: Explain squish recovery in help |
+| [Pixel](apps/pixel/) | [pixel.2haks.xyz](https://pixel.2haks.xyz) | Dustin | Draw pixel art on a 20×20 or 40×40 grid with pencil, fill, colour picker and select-and-move tools, then save it to a shared gallery or download it as a PNG. | `edd8ed8` 2026-10-01, Dustin Reeves: Note showcase listing in project state |
+| [2haks Projects](apps/showcase/) | [projects.2haks.xyz](https://projects.2haks.xyz) | Co-authored | The home page for every app Dustin and Tripp build on 2haks.xyz. Each app gets a card showing what it does and how to use its API and CLI. | `17e7e28` 2026-10-01, Tripp: Add Boss Builder card |
 <!-- apps:end -->
 
 ## What's in this repo

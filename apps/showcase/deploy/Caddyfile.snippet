@@ -1,0 +1,13 @@
+
+# showcase (/opt/apps/showcase) - added 2026-10-01
+projects.2haks.xyz {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8002
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8001
+	}
+}

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2haks Projects</title>
+  <meta name="description" content="Apps built by Dustin and Tripp, hosted on 2haks.xyz.">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <h1>2haks Projects</h1>
+    <p class="tagline">Apps built by Dustin and Tripp.</p>
+  </header>
+
+  <main>
+    <p id="status" class="status" role="status">Loading projects…</p>
+    <ul id="cards" class="cards" aria-live="polite"></ul>
+  </main>
+
+  <footer class="site-footer">
+    <a href="/api/projects">JSON</a> · <a href="/api/docs">API docs</a>
+  </footer>
+
+  <template id="card-template">
+    <li class="card">
+      <h2 class="card-title"><a class="card-link"></a></h2>
+      <p class="card-meta">
+        <span class="badge"></span>
+        <time class="card-date"></time>
+      </p>
+      <p class="card-description"></p>
+      <div class="examples"></div>
+    </li>
+  </template>
+</body>
+</html>
