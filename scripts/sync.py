@@ -160,6 +160,8 @@ def main():
     message = f"Sync from server: {summary}"
     if dry_run:
         print(f"Would commit: {message}\n{status}")
+        git("reset", "--quiet", "--hard", "HEAD", cwd=REPO)
+        git("clean", "-fdq", cwd=REPO)
         return
     git("commit", "--quiet", "-m", message, cwd=REPO)
     git("push", "--quiet", cwd=REPO)
