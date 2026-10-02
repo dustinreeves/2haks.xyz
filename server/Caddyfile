@@ -106,3 +106,16 @@ chemoquiz.2haks.xyz {
 		Cache-Control no-cache
 	}
 }
+
+podcasts.2haks.xyz {
+	encode zstd gzip
+	handle /api/* {
+		request_body {
+			max_size 8KB
+		}
+		reverse_proxy 127.0.0.1:8502
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8501
+	}
+}
