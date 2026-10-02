@@ -76,6 +76,25 @@
           "quiz add --category Space --question 'What colour is Mars?' --choice Red --choice Blue --choice Green --choice White --answer A"
         ]
       }
+    },
+    {
+      "slug": "portal",
+      "name": "Portal Fan Lab",
+      "launch_date": "2026-10-02",
+      "url": "https://portal.2haks.xyz",
+      "description": "An unofficial Portal fan game on Tripp's own Fire Raze engine: solve test chambers with a portal gun, cubes, buttons and flings, while GLaDOS judges you and Jim the tiny silent core floats along.",
+      "author": "Tripp",
+      "examples": {
+        "api": [
+          "curl https://portal.2haks.xyz/api/levels",
+          "curl https://portal.2haks.xyz/api/leaderboard"
+        ],
+        "cli": [
+          "portalfan levels",
+          "portalfan show 04-fling",
+          "portalfan leaderboard"
+        ]
+      }
     }
   ]
 }
