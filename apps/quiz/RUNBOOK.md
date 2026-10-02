@@ -2,7 +2,7 @@
 
 **URL:** https://quiz.2haks.xyz
 **Folder:** `/opt/apps/quiz` (a Git repo on the server)
-**What it does:** a 3D quiz game. You walk through one of four portals (A-D) to answer. Scores go on a leaderboard.
+**What it does:** a 3D quiz game, styled as an unofficial Portal fan game. You shoot a blue portal onto one of four answer panels (A-D), then drop into the orange floor portal to answer. Scores go on a leaderboard.
 
 ## How it fits together
 

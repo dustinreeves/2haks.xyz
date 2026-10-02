@@ -62,7 +62,7 @@
       "name": "Portal Quiz",
       "launch_date": "2026-10-01",
       "url": "https://quiz.2haks.xyz",
-      "description": "A 3D quiz game: walk through the glowing portal with the right answer, and be quick for bonus points. Questions on space, animals, maths and games, plus a leaderboard.",
+      "description": "An unofficial Portal fan game quiz: shoot a blue portal onto the right answer, then jump into the orange one. GLaDOS judges you, and Jim the tiny silent core floats along.",
       "author": "Tripp",
       "examples": {
         "api": [

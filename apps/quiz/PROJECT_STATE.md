@@ -4,7 +4,8 @@
 
 ## Progress
 - [x] API (FastAPI + SQLite): categories, questions (no answers), games with server-side answer checking and scoring, leaderboard. Docs at `/api/docs`
-- [x] 3D web game (Three.js 0.170.0, vendored): four swirling portals, WASD/arrows + drag-to-look, keys 1-4, touch arrows on phones, a colour change per room, reduced-motion support
+- [x] 3D web game (Three.js 0.170.0, vendored), restyled as an **unofficial Portal fan game**: white test chamber, portal gun, click/tap an answer panel to shoot a blue portal, walk into the orange floor portal to answer. Wrong panels turn to non-portal metal. GLaDOS subtitles (all lines written by us, text only, no audio), and Jim, a small silent core who floats next to you (click him!). WASD/arrows + drag-to-look, keys 1-4 + Space, touch arrows, reduced-motion support
+- [x] Fan-game disclaimer on the start screen (Portal/GLaDOS belong to Valve; no Valve assets, audio or quotes are used)
 - [x] CLI `quiz` (play / leaderboard / categories / questions / validate / add), sharing validation code with the API (`api/app/questions.py`)
 - [x] 32 starter questions (Space, Animals, Maths, Games)
 - [x] docker-compose (ports 8201/8202 on 127.0.0.1, hardened containers, `web-proxy`), RUNBOOK.md, tests

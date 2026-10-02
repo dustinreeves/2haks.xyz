@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>Portal Quiz</title>
-  <meta name="description" content="A 3D quiz game: walk through the portal with the right answer.">
+  <meta name="description" content="An unofficial Portal fan game: shoot a portal onto the right answer and jump in.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="scene" aria-label="3D room with four answer portals"></canvas>
+  <canvas id="scene" aria-label="Test chamber with four answer panels"></canvas>
 
   <div id="hud" hidden>
     <div id="question-box">
@@ -16,10 +16,13 @@
       <h1 id="question"></h1>
       <ol id="choice-list" class="sr-only"></ol>
     </div>
+    <div id="crosshair" aria-hidden="true"><span class="l"></span><span class="r"></span></div>
     <div id="score-box">Score <strong id="score">0</strong></div>
     <div id="toast" role="status" aria-live="polite"></div>
-    <p id="help">WASD / arrows to walk · drag to look · or press 1-4</p>
+    <p id="help">Click an answer to shoot a portal · walk into the orange portal · WASD / arrows · drag to look · keys 1-4 + Space</p>
   </div>
+
+  <p id="subtitle" role="log" aria-live="polite" hidden><b>GLaDOS:</b> <span id="subtitle-text"></span></p>
 
   <div id="touch" hidden>
     <div class="pad">
@@ -31,27 +34,31 @@
   </div>
 
   <section id="start" class="panel">
-    <h1>🌀 Portal Quiz</h1>
-    <p>Walk through the portal with the <strong>right answer</strong>. Be quick for bonus points!</p>
-    <label for="category">Category</label>
+    <p class="kicker">Enrichment Centre · Quiz Wing</p>
+    <h1>Portal Quiz</h1>
+    <p>Shoot a <span class="blue">blue portal</span> onto the right answer, then jump into the <span class="orange">orange portal</span> on the floor. Be quick for bonus points!</p>
+    <p class="small">Your companion today is <strong>Jim</strong>, a very small core. Jim does not talk.</p>
+    <label for="category">Test track</label>
     <select id="category"><option value="">Everything</option></select>
-    <button id="start-btn" class="big">Start!</button>
+    <button id="start-btn" class="big">Begin testing</button>
     <p id="start-error" class="error" role="alert"></p>
-    <h2>🏆 Top scores</h2>
+    <h2>Top test subjects</h2>
     <ol id="leaderboard" class="leaderboard"><li>Loading…</li></ol>
+    <p class="disclaimer">An unofficial fan game made by Tripp. Portal and GLaDOS belong to Valve. This game is not made by or connected to Valve.</p>
   </section>
 
   <section id="end" class="panel" hidden>
-    <h1>🎉 You did it!</h1>
+    <p class="kicker">Testing complete</p>
+    <h1>You did it!</h1>
     <p class="final">Score: <strong id="final-score">0</strong></p>
     <p id="final-detail"></p>
     <form id="name-form">
-      <label for="name">Your nickname for the leaderboard (no real full names!)</label>
+      <label for="name">Test subject nickname (no real full names!)</label>
       <input id="name" maxlength="12" autocomplete="off" required pattern="[A-Za-z0-9][A-Za-z0-9 _\-]*">
       <button class="big" type="submit">Save my score</button>
       <p id="name-error" class="error" role="alert"></p>
     </form>
-    <button id="again-btn" class="big secondary">Play again</button>
+    <button id="again-btn" class="big secondary">Test again</button>
   </section>
 
   <script type="module" src="game.js"></script>

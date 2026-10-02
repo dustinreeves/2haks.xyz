@@ -1,21 +1,74 @@
-// Portal Quiz: walk through the portal with the right answer.
-// The API (/api/*) keeps the answers; this file only draws the world and asks the API.
+// Portal Quiz: an unofficial Portal fan game.
+// Shoot a blue portal onto an answer panel, then drop into the orange portal on the floor.
+// The API (/api/*) keeps the answers; this file only draws the chamber and asks the API.
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
 
 const LETTERS = ["A", "B", "C", "D"];
-const PORTAL_COLORS = [0x7cf6ff, 0xffd166, 0xc38bff, 0x5dff9d];
-const PORTAL_X = [-4.5, -1.5, 1.5, 4.5];
-const PORTAL_Z = -8;
-const PORTAL_RADIUS = 1.15;
+const BLUE = 0x2f9bff;
+const ORANGE = 0xff8a1f;
+const PANEL_X = [-4.8, -1.6, 1.6, 4.8];
+const PANEL_Z = -8.9;
+const PANEL_W = 2.6;
+const PANEL_H = 3.4;
+const FLOOR_PORTAL = new THREE.Vector3(0, 0.02, 1.5);
+const FLOOR_PORTAL_RADIUS = 0.9;
 const EYE_HEIGHT = 1.6;
-const START = new THREE.Vector3(0, EYE_HEIGHT, 5);
-const ROOM = { minX: -9, maxX: 9, maxZ: 9 };
-const WALK_SPEED = 4.5;   // metres per second
-const TURN_SPEED = 2.0;   // radians per second
+const START = new THREE.Vector3(0, EYE_HEIGHT, 6);
+const ROOM = { minX: -6.6, maxX: 6.6, minZ: -8.3, maxZ: 8.4, width: 14, depth: 18, height: 7 };
+const WALK_SPEED = 4.5;
+const TURN_SPEED = 2.0;
 const BASE_FOV = 70;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const $ = (id) => document.getElementById(id);
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+// ---------- GLaDOS (all lines written for this fan game) ----------
+
+const LINES = {
+  intro: [
+    "Hello, and welcome to the Quiz Wing. Please shoot a portal onto the correct answer. Then jump in. That is the whole test. Even you can do it. Probably.",
+    "Oh. A new test subject. And you brought Jim. Jim is a very small core. Jim does not talk, which makes him my favourite.",
+  ],
+  correct: [
+    "Correct. I am recording that as a lucky guess.",
+    "Well done. That was the right answer. I checked twice because I was surprised.",
+    "Correct. Jim is spinning. I believe that means he is happy. Or broken.",
+    "Good. The next test chamber is ready. It has more science in it.",
+    "Correct. You are doing better than the last test subject. He tried to portal into the ceiling.",
+  ],
+  wrong: [
+    "No. That panel is now made of metal portals will not stick to. Science has spoken.",
+    "Incorrect. Do not worry. Being wrong is an important part of science. Mostly for you.",
+    "That was the wrong answer. Jim looks disappointed. He is a sphere, but I can tell.",
+    "Wrong. Try a different panel. There are only three left. Two, if you keep this up.",
+  ],
+  noBlue: [
+    "You jumped into a portal with nowhere to go. Shoot a blue portal on an answer panel first.",
+    "The orange portal needs a partner. Put a blue portal on an answer. That is how portals work.",
+  ],
+  metal: [
+    "Portals do not stick to that panel any more. You already tried it. Remember?",
+  ],
+  jim: [
+    "That is Jim. Jim does not talk. It is honestly his best feature.",
+    "Please stop poking Jim. He is a core, not a button.",
+    "Jim would like you to focus on the test. I am guessing. He did not say anything.",
+  ],
+  end: [
+    "Testing is complete. You did well. There will be a party. I am almost sure there will be a party.",
+    "All test chambers done. Jim did a little spin. I have never seen him do that before. It was upsetting.",
+  ],
+};
+
+let subtitleTimer;
+function say(text) {
+  const box = $("subtitle");
+  $("subtitle-text").textContent = text;
+  box.hidden = false;
+  clearTimeout(subtitleTimer);
+  subtitleTimer = setTimeout(() => { box.hidden = true; }, 3500 + text.length * 45);
+}
 
 // ---------- API ----------
 
@@ -34,123 +87,94 @@ async function api(path, options = {}) {
   return body;
 }
 
-// ---------- 3D world ----------
+// ---------- textures drawn in code ----------
 
-const canvas = $("scene");
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0720);
-scene.fog = new THREE.Fog(0x0b0720, 12, 34);
-
-const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.1, 100);
-camera.rotation.order = "YXZ";
-
-scene.add(new THREE.HemisphereLight(0xbfb8ff, 0x1a1040, 1.2));
-const glow = new THREE.PointLight(0x7cf6ff, 30, 20);
-glow.position.set(0, 4, PORTAL_Z + 2);
-scene.add(glow);
-
-// Floor with a glowing grid.
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(20, 22),
-  new THREE.MeshStandardMaterial({ color: 0x1a1240, roughness: 0.9 }),
-);
-floor.rotation.x = -Math.PI / 2;
-floor.position.z = 0;
-scene.add(floor);
-const grid = new THREE.GridHelper(20, 20, 0x7cf6ff, 0x3a2d7a);
-grid.position.set(0, 0.01, 0);
-grid.material.transparent = true;
-grid.material.opacity = 0.45;
-scene.add(grid);
-
-// Walls (left, right, back behind the portals).
-const wallMat = new THREE.MeshStandardMaterial({ color: 0x241a55, roughness: 0.8 });
-function wall(w, h, x, z, rotY) {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
-  m.position.set(x, h / 2, z);
-  m.rotation.y = rotY;
-  scene.add(m);
-}
-wall(22, 6, -10, 0, Math.PI / 2);
-wall(22, 6, 10, 0, -Math.PI / 2);
-wall(20, 6, 0, -11, 0);
-wall(20, 6, 0, 11, Math.PI);
-
-// Floating stars for atmosphere.
-{
-  const pts = new Float32Array(600 * 3);
-  for (let i = 0; i < pts.length; i += 3) {
-    pts[i] = (Math.random() - 0.5) * 19;
-    pts[i + 1] = 0.5 + Math.random() * 5.5;
-    pts[i + 2] = (Math.random() - 0.5) * 21;
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pts, 3));
-  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.04, transparent: true, opacity: 0.7 })));
-}
-
-// A swirling disc shader for the inside of each portal.
-const swirlVertex = `
-  varying vec2 vUv;
-  void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
-`;
-const swirlFragment = `
-  uniform float uTime;
-  uniform vec3 uColor;
-  uniform float uDim;
-  varying vec2 vUv;
-  void main() {
-    vec2 p = vUv - 0.5;
-    float r = length(p) * 2.0;
-    float a = atan(p.y, p.x);
-    float swirl = sin(a * 4.0 + r * 10.0 - uTime * 3.0) * 0.5 + 0.5;
-    float edge = smoothstep(1.0, 0.75, r);
-    vec3 col = mix(uColor * 0.35, uColor * 1.4, swirl * (1.0 - r * 0.5));
-    col = mix(col, vec3(0.25), uDim);
-    gl_FragColor = vec4(col, edge * 0.92);
-  }
-`;
-
-function makeLabelTexture(letter, text, color) {
+function canvasTexture(w, h, draw, repeat = [1, 1]) {
   const c = document.createElement("canvas");
-  c.width = 512;
-  c.height = 192;
-  const g = c.getContext("2d");
-  g.fillStyle = "rgba(18, 12, 40, 0.85)";
-  g.beginPath();
-  g.roundRect(4, 4, 504, 184, 28);
-  g.fill();
-  g.lineWidth = 6;
-  g.strokeStyle = `#${color.toString(16).padStart(6, "0")}`;
-  g.stroke();
-
-  g.fillStyle = g.strokeStyle;
-  g.font = "bold 92px system-ui, sans-serif";
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillText(letter, 70, 98);
-
-  // Fit the answer into at most 2 lines, shrinking the font if needed.
-  g.fillStyle = "#f4f1ff";
-  g.textAlign = "left";
-  const maxW = 360;
-  let size = 52;
-  let lines;
-  do {
-    g.font = `bold ${size}px system-ui, sans-serif`;
-    lines = wrap(g, text, maxW);
-    size -= 4;
-  } while ((lines.length > 2 || lines.some((l) => g.measureText(l).width > maxW)) && size > 18);
-  const lh = size + 10;
-  lines.forEach((l, i) => g.fillText(l, 130, 96 + (i - (lines.length - 1) / 2) * lh));
-
+  c.width = w;
+  c.height = h;
+  draw(c.getContext("2d"), w, h);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
+  if (repeat[0] !== 1 || repeat[1] !== 1) {
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(repeat[0], repeat[1]);
+  }
   return tex;
+}
+
+// White square wall panels with thin grey seams.
+const wallTex = canvasTexture(256, 256, (g, w, h) => {
+  g.fillStyle = "#e9ecef";
+  g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < 2; j++) {
+      const shade = 232 + ((i + j) % 2) * 6;
+      g.fillStyle = `rgb(${shade}, ${shade + 2}, ${shade + 4})`;
+      g.fillRect(i * 128 + 4, j * 128 + 4, 120, 120);
+    }
+  }
+  g.strokeStyle = "#b5bcc3";
+  g.lineWidth = 4;
+  for (let k = 0; k <= 256; k += 128) {
+    g.beginPath(); g.moveTo(k, 0); g.lineTo(k, h); g.stroke();
+    g.beginPath(); g.moveTo(0, k); g.lineTo(w, k); g.stroke();
+  }
+}, [ROOM.width / 2, ROOM.height / 2]);
+
+// Dark metal floor tiles.
+const floorTex = canvasTexture(256, 256, (g, w, h) => {
+  g.fillStyle = "#4a5056";
+  g.fillRect(0, 0, w, h);
+  g.strokeStyle = "#33383d";
+  g.lineWidth = 6;
+  g.strokeRect(0, 0, w, h);
+  g.strokeStyle = "#5a6066";
+  g.lineWidth = 2;
+  g.strokeRect(10, 10, w - 20, h - 20);
+}, [ROOM.width / 2, ROOM.depth / 2]);
+
+function signTexture(letter, text, mode = "normal") {
+  return canvasTexture(512, 192, (g) => {
+    g.fillStyle = mode === "metal" ? "#3a3f44" : "#f6f7f8";
+    g.fillRect(0, 0, 512, 192);
+    g.fillStyle = mode === "metal" ? "#6c737a" : "#1d2126";
+    g.fillRect(0, 0, 150, 192);
+    g.fillStyle = mode === "metal" ? "#3a3f44" : "#f6f7f8";
+    g.font = "bold 120px 'Segoe UI', system-ui, sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(letter, 75, 100);
+
+    g.fillStyle = mode === "metal" ? "#9aa1a8" : "#1d2126";
+    g.textAlign = "left";
+    const maxW = 335;
+    let size = 84;
+    let lines;
+    do {
+      g.font = `600 ${size}px 'Segoe UI', system-ui, sans-serif`;
+      lines = wrap(g, text, maxW);
+      size -= 4;
+    } while ((lines.length > 2 || lines.some((l) => g.measureText(l).width > maxW)) && size > 18);
+    const lh = size + 10;
+    lines.forEach((l, i) => g.fillText(l, 168, 98 + (i - (lines.length - 1) / 2) * lh));
+  });
+}
+
+function chamberTexture(n, total) {
+  return canvasTexture(256, 384, (g) => {
+    g.fillStyle = "#f6f7f8";
+    g.fillRect(0, 0, 256, 384);
+    g.fillStyle = "#1d2126";
+    g.font = "bold 150px 'Segoe UI', system-ui, sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(String(n).padStart(2, "0"), 128, 130);
+    g.fillRect(24, 230, 208, 6);
+    g.font = "600 36px 'Segoe UI', system-ui, sans-serif";
+    g.fillText(`of ${String(total).padStart(2, "0")}`, 128, 290);
+  });
 }
 
 function wrap(g, text, maxW) {
@@ -170,62 +194,255 @@ function wrap(g, text, maxW) {
   return lines;
 }
 
-const portals = PORTAL_X.map((x, i) => {
-  const group = new THREE.Group();
-  group.position.set(x, EYE_HEIGHT, PORTAL_Z);
+// ---------- the test chamber ----------
 
-  const ringMat = new THREE.MeshStandardMaterial({
-    color: PORTAL_COLORS[i], emissive: PORTAL_COLORS[i], emissiveIntensity: 1.2, roughness: 0.3,
-  });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(PORTAL_RADIUS, 0.12, 16, 64), ringMat);
-  group.add(ring);
+const canvas = $("scene");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  const discMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(PORTAL_COLORS[i]) }, uDim: { value: 0 } },
-    vertexShader: swirlVertex,
-    fragmentShader: swirlFragment,
-    transparent: true,
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9aa3ab);
+
+const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.05, 100);
+camera.rotation.order = "YXZ";
+scene.add(camera); // the portal gun is a child of the camera
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x5a6066, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(3, 10, 6);
+scene.add(sun);
+
+const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.85 });
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(ROOM.width, ROOM.depth),
+  new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.7, metalness: 0.2 }),
+);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+const ceiling = new THREE.Mesh(
+  new THREE.PlaneGeometry(ROOM.width, ROOM.depth),
+  new THREE.MeshStandardMaterial({ color: 0x7d858c, roughness: 0.9 }),
+);
+ceiling.rotation.x = Math.PI / 2;
+ceiling.position.y = ROOM.height;
+scene.add(ceiling);
+
+// Long ceiling light strips.
+for (const x of [-4, 0, 4]) {
+  const strip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.08, ROOM.depth - 2),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  );
+  strip.position.set(x, ROOM.height - 0.05, 0);
+  scene.add(strip);
+}
+
+function wall(w, h, x, z, rotY) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
+  m.position.set(x, h / 2, z);
+  m.rotation.y = rotY;
+  scene.add(m);
+}
+wall(ROOM.depth, ROOM.height, -ROOM.width / 2, 0, Math.PI / 2);
+wall(ROOM.depth, ROOM.height, ROOM.width / 2, 0, -Math.PI / 2);
+wall(ROOM.width, ROOM.height, 0, -ROOM.depth / 2, 0);
+wall(ROOM.width, ROOM.height, 0, ROOM.depth / 2, Math.PI);
+
+// Big chamber number sign on the left wall.
+const chamberSignMat = new THREE.MeshBasicMaterial();
+const chamberSign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.4), chamberSignMat);
+chamberSign.position.set(-ROOM.width / 2 + 0.02, 3, 3);
+chamberSign.rotation.y = Math.PI / 2;
+scene.add(chamberSign);
+
+// Swirly portal surface shader.
+const portalVertex = `
+  varying vec2 vUv;
+  void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+`;
+const portalFragment = `
+  uniform float uTime;
+  uniform vec3 uColor;
+  uniform float uOpen;
+  varying vec2 vUv;
+  void main() {
+    vec2 p = (vUv - 0.5) * 2.0;
+    float r = length(p) / max(uOpen, 0.001);
+    if (r > 1.0) discard;
+    float a = atan(p.y, p.x);
+    float swirl = sin(a * 3.0 + r * 9.0 - uTime * 4.0) * 0.5 + 0.5;
+    float rim = smoothstep(0.75, 1.0, r);
+    vec3 col = mix(uColor * 0.25, uColor * 1.2, swirl * 0.6 + rim);
+    col += rim * 0.6;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+function makePortal(color, w, h) {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(color) }, uOpen: { value: 0 } },
+    vertexShader: portalVertex,
+    fragmentShader: portalFragment,
     side: THREE.DoubleSide,
-    depthWrite: false,
   });
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(PORTAL_RADIUS, 48), discMat);
-  group.add(disc);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  const light = new THREE.PointLight(color, 6, 4);
+  mesh.add(light);
+  light.position.z = 0.4;
+  return { mesh, mat, light, open: 0, target: 0 };
+}
 
-  const labelMat = new THREE.MeshBasicMaterial({ transparent: true });
-  const label = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.975), labelMat);
-  label.position.set(0, PORTAL_RADIUS + 0.8, 0);
-  group.add(label);
+// The orange portal is always open on the floor.
+const orange = makePortal(ORANGE, FLOOR_PORTAL_RADIUS * 2, FLOOR_PORTAL_RADIUS * 2.6);
+orange.mesh.rotation.x = -Math.PI / 2;
+orange.mesh.position.copy(FLOOR_PORTAL);
+orange.target = 1;
+scene.add(orange.mesh);
 
-  scene.add(group);
-  return { group, ring, ringMat, discMat, labelMat, color: PORTAL_COLORS[i], closed: false };
+// The blue portal moves to whichever answer panel you shoot.
+const blue = makePortal(BLUE, 1.5, 2.4);
+blue.mesh.visible = false;
+scene.add(blue.mesh);
+
+// Answer panels on the back wall.
+const panels = PANEL_X.map((x, i) => {
+  const surfaceMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
+  const surface = new THREE.Mesh(new THREE.BoxGeometry(PANEL_W, PANEL_H, 0.1), surfaceMat);
+  surface.position.set(x, PANEL_H / 2 + 0.3, PANEL_Z);
+  surface.userData.panel = i;
+  scene.add(surface);
+
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(PANEL_W + 0.2, PANEL_H + 0.2, 0.06),
+    new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.5, metalness: 0.4 }),
+  );
+  frame.position.set(x, PANEL_H / 2 + 0.3, PANEL_Z - 0.04);
+  scene.add(frame);
+
+  const signMat = new THREE.MeshBasicMaterial();
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_W, PANEL_W * 0.375), signMat);
+  sign.position.set(x, PANEL_H + 1.05, PANEL_Z + 0.02);
+  sign.userData.panel = i;
+  scene.add(sign);
+
+  return { surface, surfaceMat, signMat, metal: false, text: "" };
 });
+const shootTargets = panels.flatMap((p) => [p.surface]);
 
-function setPortalLabels(choices) {
-  portals.forEach((p, i) => {
-    if (p.labelMat.map) p.labelMat.map.dispose();
-    p.labelMat.map = makeLabelTexture(LETTERS[i], choices[i], p.color);
-    p.labelMat.needsUpdate = true;
-    p.closed = false;
-    p.ringMat.color.setHex(p.color);
-    p.ringMat.emissive.setHex(p.color);
-    p.discMat.uniforms.uDim.value = 0;
+function setPanels(choices) {
+  panels.forEach((p, i) => {
+    p.metal = false;
+    p.text = choices[i];
+    p.surfaceMat.color.setHex(0xffffff);
+    p.surfaceMat.metalness = 0;
+    if (p.signMat.map) p.signMat.map.dispose();
+    p.signMat.map = signTexture(LETTERS[i], choices[i]);
+    p.signMat.needsUpdate = true;
   });
+  closeBlue();
 }
 
-function closePortal(i) {
-  const p = portals[i];
-  p.closed = true;
-  p.ringMat.color.setHex(0xff5d7a);
-  p.ringMat.emissive.setHex(0xff5d7a);
-  p.discMat.uniforms.uDim.value = 0.85;
+function makeMetal(i) {
+  const p = panels[i];
+  p.metal = true;
+  p.surfaceMat.color.setHex(0x3a3f44);
+  p.surfaceMat.metalness = 0.6;
+  if (p.signMat.map) p.signMat.map.dispose();
+  p.signMat.map = signTexture(LETTERS[i], p.text, "metal");
+  p.signMat.needsUpdate = true;
 }
+
+// ---------- the portal gun (held in front of the camera) ----------
+
+const gun = new THREE.Group();
+{
+  const white = new THREE.MeshStandardMaterial({ color: 0xf3f4f5, roughness: 0.35 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.5, metalness: 0.5 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.32, 6, 16), white);
+  body.rotation.x = Math.PI / 2;
+  gun.add(body);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.16, 16), dark);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.z = -0.26;
+  gun.add(barrel);
+  for (const side of [-1, 1]) {
+    const claw = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.18), dark);
+    claw.position.set(side * 0.07, 0.04, -0.3);
+    claw.rotation.y = side * 0.25;
+    gun.add(claw);
+  }
+  const top = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.14, 4, 8), dark);
+  top.rotation.x = Math.PI / 2;
+  top.position.set(0, 0.1, 0.04);
+  gun.add(top);
+}
+const gunGlowMat = new THREE.MeshBasicMaterial({ color: BLUE });
+const gunGlow = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 12), gunGlowMat);
+gunGlow.position.z = -0.34;
+gun.add(gunGlow);
+gun.position.set(0.32, -0.28, -0.55);
+gun.scale.setScalar(0.8);
+camera.add(gun);
+let recoil = 0;
+
+// A short-lived blue beam from the gun to where the portal lands.
+const beamMat = new THREE.MeshBasicMaterial({ color: BLUE, transparent: true, opacity: 0.9 });
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1, 8), beamMat);
+beam.visible = false;
+scene.add(beam);
+let beamLife = 0;
+
+// ---------- Jim, the little core who never talks ----------
+
+const jim = new THREE.Group();
+const jimEyeMat = new THREE.MeshBasicMaterial({ color: 0xffc640 });
+{
+  const shell = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 24, 16),
+    new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.35, metalness: 0.6 }),
+  );
+  jim.add(shell);
+  const band = new THREE.Mesh(
+    new THREE.TorusGeometry(0.225, 0.025, 8, 32),
+    new THREE.MeshStandardMaterial({ color: 0x4a5056, roughness: 0.5, metalness: 0.5 }),
+  );
+  jim.add(band);
+  const eye = new THREE.Mesh(new THREE.CircleGeometry(0.08, 24), jimEyeMat);
+  eye.position.z = 0.215;
+  jim.add(eye);
+  const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.03, 16), new THREE.MeshBasicMaterial({ color: 0x1d2126 }));
+  pupil.position.z = 0.218;
+  jim.add(pupil);
+  for (const side of [-1, 1]) {
+    const handle = new THREE.Mesh(
+      new THREE.TorusGeometry(0.1, 0.018, 6, 16, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x4a5056 }),
+    );
+    handle.position.set(side * 0.2, 0, 0);
+    handle.rotation.set(0, Math.PI / 2, side * Math.PI / 2);
+    jim.add(handle);
+  }
+  const light = new THREE.PointLight(0xffc640, 1.5, 2);
+  light.position.z = 0.4;
+  jim.add(light);
+}
+jim.traverse((o) => { o.userData.jim = true; });
+jim.position.set(-1, 1.4, 4.5);
+scene.add(jim);
+const jimMood = { kind: "idle", time: 0 };
+function jimReact(kind) {
+  jimMood.kind = kind;
+  jimMood.time = kind === "idle" ? 0 : 1.4;
+}
+
+// ---------- screen size ----------
 
 function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  // Narrow screens (phones held upright) see more by widening the view.
   camera.userData.baseFov = w < h ? 90 : BASE_FOV;
   camera.fov = camera.userData.baseFov;
   camera.updateProjectionMatrix();
@@ -249,14 +466,19 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
   }
   const n = ["Digit1", "Digit2", "Digit3", "Digit4"].indexOf(e.code);
-  if (n >= 0) choose(n);
+  if (n >= 0) shootAtPanel(n);
+  if (e.code === "Space" || e.code === "Enter") {
+    e.preventDefault();
+    jumpIn();
+  }
 });
 window.addEventListener("keyup", (e) => { if (KEYMAP[e.code]) held.delete(KEYMAP[e.code]); });
 window.addEventListener("blur", () => held.clear());
 
+// Drag to look; a quick tap/click (without dragging) shoots a portal at that spot.
 let drag = null;
 canvas.addEventListener("pointerdown", (e) => {
-  drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), id: e.pointerId };
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener("pointermove", (e) => {
@@ -266,11 +488,14 @@ canvas.addEventListener("pointermove", (e) => {
   drag.x = e.clientX;
   drag.y = e.clientY;
 });
-const endDrag = () => { drag = null; };
-canvas.addEventListener("pointerup", endDrag);
-canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("pointerup", (e) => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const moved = Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy);
+  if (moved < 8 && performance.now() - drag.t < 400) shootAtScreen(e.clientX, e.clientY);
+  drag = null;
+});
+canvas.addEventListener("pointercancel", () => { drag = null; });
 
-// On-screen arrows for phones and tablets.
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
 document.querySelectorAll("#touch button").forEach((b) => {
   const key = b.dataset.key;
@@ -288,6 +513,86 @@ function resetPlayer() {
   held.clear();
 }
 
+// ---------- shooting portals ----------
+
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const tmp = new THREE.Vector3();
+
+function shootAtScreen(clientX, clientY) {
+  if (state.mode !== "playing" || state.busy) return;
+  const rect = canvas.getBoundingClientRect();
+  ndc.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObjects([...shootTargets, jim], true);
+  const hit = hits[0];
+  fireBeam(hit ? hit.point : raycaster.ray.at(12, tmp));
+  if (!hit) return;
+  if (hit.object.userData.jim) {
+    jimReact("poke");
+    say(pick(LINES.jim));
+    return;
+  }
+  if (hit.object.userData.panel !== undefined) placeBlue(hit.object.userData.panel);
+}
+
+function shootAtPanel(i) {
+  if (state.mode !== "playing" || state.busy) return;
+  fireBeam(panels[i].surface.position);
+  placeBlue(i);
+}
+
+function fireBeam(to) {
+  recoil = 1;
+  gunGlowMat.color.setHex(BLUE);
+  const from = gunGlow.getWorldPosition(new THREE.Vector3());
+  const dir = new THREE.Vector3().subVectors(to, from);
+  beam.position.copy(from).addScaledVector(dir, 0.5);
+  beam.scale.set(1, dir.length(), 1);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  beam.visible = true;
+  beamLife = 0.15;
+}
+
+function placeBlue(i) {
+  if (panels[i].metal) {
+    say(pick(LINES.metal));
+    return;
+  }
+  state.target = i;
+  blue.mesh.position.set(PANEL_X[i], PANEL_H / 2 + 0.3, PANEL_Z + 0.07);
+  blue.mesh.visible = true;
+  blue.open = 0;
+  blue.target = 1;
+}
+
+function closeBlue() {
+  state.target = null;
+  blue.target = 0;
+  blue.open = 0;
+  blue.mesh.visible = false;
+}
+
+function jumpIn() {
+  if (state.mode !== "playing" || state.busy) return;
+  if (state.target === null) {
+    nag();
+    return;
+  }
+  choose(state.target);
+}
+
+let lastNag = 0;
+function nag() {
+  const now = performance.now();
+  if (now - lastNag > 4000) {
+    say(pick(LINES.noBlue));
+    lastNag = now;
+  }
+}
+
+// ---------- moving ----------
+
 const forward = new THREE.Vector3();
 const sideways = new THREE.Vector3();
 
@@ -304,15 +609,21 @@ function movePlayer(dt) {
   if (held.has("strafeLeft")) player.pos.addScaledVector(sideways, -step);
 
   player.pos.x = THREE.MathUtils.clamp(player.pos.x, ROOM.minX, ROOM.maxX);
-  player.pos.z = Math.min(player.pos.z, ROOM.maxZ);
+  player.pos.z = THREE.MathUtils.clamp(player.pos.z, ROOM.minZ, ROOM.maxZ);
 
-  // Walking into the plane of the portals: either you went through one, or you hit the wall.
-  if (player.pos.z < PORTAL_Z + 0.3) {
-    const hit = PORTAL_X.findIndex((x) => Math.abs(player.pos.x - x) < PORTAL_RADIUS - 0.15);
-    if (hit >= 0 && !portals[hit].closed && state.mode === "playing" && !state.busy) {
-      choose(hit);
+  // Stepping onto the orange floor portal.
+  const dx = player.pos.x - FLOOR_PORTAL.x;
+  const dz = player.pos.z - FLOOR_PORTAL.z;
+  if (Math.hypot(dx, dz * 0.77) < FLOOR_PORTAL_RADIUS * 0.8) {
+    if (state.target === null) {
+      nag();
+      // Step back off the portal so you don't stand in it.
+      const len = Math.hypot(dx, dz) || 1;
+      player.pos.x = FLOOR_PORTAL.x + (dx / len) * FLOOR_PORTAL_RADIUS * 1.4;
+      player.pos.z = FLOOR_PORTAL.z + (dz / len || 1) * FLOOR_PORTAL_RADIUS * 1.4;
+    } else {
+      choose(state.target);
     }
-    player.pos.z = PORTAL_Z + 0.3;
   }
 }
 
@@ -326,28 +637,24 @@ const state = {
   round: 0,
   score: 0,
   correctFirst: 0,
-  hue: 0,
+  target: null, // panel with the blue portal on it
 };
 
 function showRound() {
   const r = state.rounds[state.round];
-  $("round-info").textContent = `Question ${state.round + 1} of ${state.rounds.length} · ${r.category}`;
+  const n = state.round + 1;
+  $("round-info").textContent = `Test chamber ${String(n).padStart(2, "0")} / ${String(state.rounds.length).padStart(2, "0")} · ${r.category}`;
   $("question").textContent = r.question;
-  const list = $("choice-list");
-  list.replaceChildren(...r.choices.map((c, i) => {
+  $("choice-list").replaceChildren(...r.choices.map((c, i) => {
     const li = document.createElement("li");
-    li.textContent = `Portal ${LETTERS[i]} (key ${i + 1}): ${c}`;
+    li.textContent = `Panel ${LETTERS[i]} (key ${i + 1}): ${c}`;
     return li;
   }));
-  setPortalLabels(r.choices);
+  setPanels(r.choices);
+  if (chamberSignMat.map) chamberSignMat.map.dispose();
+  chamberSignMat.map = chamberTexture(n, state.rounds.length);
+  chamberSignMat.needsUpdate = true;
   resetPlayer();
-  // Each room gets a new colour, so it feels like you travelled somewhere.
-  state.hue = (state.hue + 0.13) % 1;
-  const bg = new THREE.Color().setHSL(state.hue, 0.55, 0.06);
-  scene.background = bg;
-  scene.fog.color = bg;
-  wallMat.color.setHSL(state.hue, 0.45, 0.2);
-  glow.color.setHSL(state.hue, 0.9, 0.7);
 }
 
 let toastTimer;
@@ -359,47 +666,56 @@ function toast(text, kind) {
   toastTimer = setTimeout(() => { t.className = ""; }, 1300);
 }
 
-// Push the player back far enough to see all four portals again.
-function bounceBack() {
-  player.pos.z = Math.max(player.pos.z, PORTAL_Z + 7);
+// "Fall" through the floor portal and out of the blue one.
+let fall = 0;
+const FALL_TIME = 0.7;
+
+function backToStart() {
+  player.pos.copy(START);
   player.yaw = 0;
   player.pitch = -0.05;
   held.clear();
 }
 
-let warp = 0; // seconds left of the "whoosh" effect after a right answer
-const WARP_TIME = 0.6;
-
 async function choose(i) {
-  if (state.mode !== "playing" || state.busy || portals[i].closed) return;
+  if (state.mode !== "playing" || state.busy || panels[i].metal) return;
   state.busy = true;
+  if (!reducedMotion) fall = FALL_TIME;
   try {
-    const res = await api(`/games/${state.gameId}/answer`, {
-      method: "POST",
-      body: JSON.stringify({ round: state.round, choice: i }),
-    });
+    const [res] = await Promise.all([
+      api(`/games/${state.gameId}/answer`, { method: "POST", body: JSON.stringify({ round: state.round, choice: i }) }),
+      new Promise((r) => setTimeout(r, reducedMotion ? 100 : FALL_TIME * 1000)),
+    ]);
     state.score = res.score;
     $("score").textContent = String(res.score);
     if (res.correct) {
       toast(`Correct! +${res.points}`, "good");
+      jimReact("happy");
       state.correctFirst = res.correct_first_try;
-      if (!reducedMotion) warp = WARP_TIME;
-      await new Promise((r) => setTimeout(r, reducedMotion ? 300 : WARP_TIME * 1000));
       if (res.finished) {
+        say(pick(LINES.end));
+        await new Promise((r) => setTimeout(r, 1200));
         endGame();
       } else {
+        say(pick(LINES.correct));
+        await new Promise((r) => setTimeout(r, 900));
         state.round += 1;
         showRound();
       }
     } else {
-      toast("Not that one! Try again", "bad");
-      closePortal(i);
-      bounceBack();
+      toast("Wrong panel!", "bad");
+      jimReact("sad");
+      say(pick(LINES.wrong));
+      makeMetal(i);
+      closeBlue();
+      backToStart();
     }
   } catch (err) {
     toast(err.message, "bad");
-    bounceBack();
+    closeBlue();
+    backToStart();
   } finally {
+    fall = 0;
     state.busy = false;
   }
 }
@@ -417,9 +733,9 @@ async function startGame() {
     $("end").hidden = true;
     $("hud").hidden = false;
     $("touch").hidden = !isTouch;
-    if (isTouch) $("help").textContent = "Use the arrows to walk · drag to look";
+    if (isTouch) $("help").textContent = "Tap an answer to shoot a portal · walk into the orange portal · drag to look";
     showRound();
-    canvas.focus();
+    say(pick(LINES.intro));
   } catch (err) {
     $("start-error").textContent = err.message;
   } finally {
@@ -434,7 +750,7 @@ function endGame() {
   $("touch").hidden = true;
   $("final-score").textContent = String(state.score);
   $("final-detail").textContent =
-    `You got ${state.correctFirst} of ${state.rounds.length} right on the first try.`;
+    `You got ${state.correctFirst} of ${state.rounds.length} right on the first try. Jim is proud of you. Probably.`;
   $("name-form").hidden = false;
   $("name-error").textContent = "";
   $("end").hidden = false;
@@ -452,7 +768,7 @@ $("name-form").addEventListener("submit", async (e) => {
       body: JSON.stringify({ name: $("name").value }),
     });
     $("name-form").hidden = true;
-    $("final-detail").textContent = `You're number ${res.rank} on the leaderboard! 🏆`;
+    $("final-detail").textContent = `You're test subject number ${res.rank} on the leaderboard!`;
     loadLeaderboard();
   } catch (err) {
     $("name-error").textContent = err.message;
@@ -465,6 +781,7 @@ $("again-btn").addEventListener("click", () => {
   state.mode = "menu";
   $("end").hidden = true;
   $("start").hidden = false;
+  closeBlue();
   resetPlayer();
 });
 $("start-btn").addEventListener("click", startGame);
@@ -475,7 +792,7 @@ async function loadLeaderboard() {
     const { leaderboard } = await api("/leaderboard");
     if (!leaderboard.length) {
       const li = document.createElement("li");
-      li.textContent = "No scores yet. Be the first!";
+      li.textContent = "No test subjects yet. Be the first!";
       list.replaceChildren(li);
       return;
     }
@@ -511,36 +828,73 @@ async function loadCategories() {
 
 // ---------- main loop ----------
 
+const jimTarget = new THREE.Vector3();
 const clock = new THREE.Clock();
+
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   const t = clock.elapsedTime;
 
   if (state.mode === "playing" && !state.busy) movePlayer(dt);
-  else if (state.mode === "menu" && !reducedMotion) player.yaw = Math.sin(t * 0.2) * 0.25; // gentle look-around behind the menu
+  else if (state.mode === "menu" && !reducedMotion) player.yaw = Math.sin(t * 0.2) * 0.3;
 
-  portals.forEach((p, i) => {
-    p.discMat.uniforms.uTime.value = t + i;
-    if (!reducedMotion) p.ring.rotation.z = t * 0.4 * (i % 2 ? 1 : -1);
-  });
+  // Portals open smoothly and swirl.
+  for (const p of [orange, blue]) {
+    p.open += (p.target - p.open) * Math.min(1, dt * 10);
+    p.mat.uniforms.uOpen.value = reducedMotion ? p.target : p.open;
+    p.mat.uniforms.uTime.value = t;
+  }
 
+  // Beam and recoil.
+  if (beamLife > 0) {
+    beamLife -= dt;
+    beamMat.opacity = Math.max(0, beamLife / 0.15);
+    if (beamLife <= 0) beam.visible = false;
+  }
+  recoil = Math.max(0, recoil - dt * 6);
+  gun.position.z = -0.55 + recoil * 0.08;
+  gun.rotation.x = recoil * 0.15;
+  if (!reducedMotion) gun.position.y = -0.28 + Math.sin(t * 2) * 0.006;
+  gunGlowMat.color.setHex(state.target === null ? BLUE : ORANGE);
+
+  // Jim floats beside you, a little ahead, and looks at you.
+  forward.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  sideways.set(-forward.z, 0, forward.x);
+  jimTarget.copy(player.pos).addScaledVector(forward, 2.6).addScaledVector(sideways, -1.6);
+  jimTarget.y = 1.15 + (reducedMotion ? 0 : Math.sin(t * 2.2) * 0.06);
+  if (jimMood.time > 0) {
+    jimMood.time -= dt;
+    if (jimMood.kind === "sad") jimTarget.y -= 0.35;
+    if (jimMood.kind === "happy" && !reducedMotion) jimTarget.y += Math.abs(Math.sin(t * 10)) * 0.25;
+    if (jimMood.time <= 0) jimReact("idle");
+  }
+  jim.position.lerp(jimTarget, Math.min(1, dt * 4));
+  jim.lookAt(player.pos);
+  if (!reducedMotion) {
+    if (jimMood.kind === "happy") jim.rotateZ(t * 12);
+    if (jimMood.kind === "poke") jim.rotateZ(Math.sin(t * 30) * 0.4);
+    if (jimMood.kind === "sad") jim.rotateX(0.5);
+  }
+  jimEyeMat.color.setHex(jimMood.kind === "sad" ? 0x8a6a20 : 0xffc640);
+
+  // Falling through the floor portal.
   const baseFov = camera.userData.baseFov;
-  if (warp > 0) {
-    warp = Math.max(0, warp - dt);
-    const k = 1 - warp / WARP_TIME;
-    camera.fov = baseFov + Math.sin(k * Math.PI) * 50;
-    player.pos.z -= dt * 12;
+  camera.position.copy(player.pos);
+  if (fall > 0) {
+    fall = Math.max(0, fall - dt);
+    const k = 1 - fall / FALL_TIME;
+    camera.position.y -= k * k * 2.2;
+    camera.fov = baseFov + Math.sin(k * Math.PI) * 40;
     camera.updateProjectionMatrix();
   } else if (camera.fov !== baseFov) {
     camera.fov = baseFov;
     camera.updateProjectionMatrix();
   }
-
-  camera.position.copy(player.pos);
   camera.rotation.set(player.pitch, player.yaw, 0);
   renderer.render(scene, camera);
 });
 
-setPortalLabels(["Space", "Animals", "Maths", "Games"]);
+setPanels(["Space", "Animals", "Maths", "Games"]);
+chamberSignMat.map = chamberTexture(1, 10);
 loadCategories();
 loadLeaderboard();
