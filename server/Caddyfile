@@ -68,3 +68,16 @@ quiz.2haks.xyz {
 www.2haks.xyz {
 	redir https://2haks.xyz{uri} permanent
 }
+
+portal.2haks.xyz {
+	encode zstd gzip
+	handle /api/* {
+		request_body {
+			max_size 8KB
+		}
+		reverse_proxy 127.0.0.1:8302
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8301
+	}
+}

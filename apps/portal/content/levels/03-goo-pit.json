@@ -1,0 +1,21 @@
+{
+  "id": "03-goo-pit",
+  "order": 3,
+  "name": "Goo Pit",
+  "intro": "Test Chamber 03. That pit is full of goo. Please do not swim in the goo. The goo has not been tested on humans. Well, it has, but it did not go well.",
+  "hint": "You can see a white panel on the far wall. Portals work across gaps.",
+  "gun": "both",
+  "start": {"pos": [0, 1.6, 4], "yaw": 0},
+  "room": {"min": [-6, -3, -18], "max": [6, 7, 6], "type": "metal", "floor": false},
+  "boxes": [
+    {"min": [-6, -3, -2], "max": [6, 0, 6], "type": "metal"},
+    {"min": [-6, -3, -18], "max": [6, 0, -11], "type": "metal"},
+    {"min": [-6, -4, -11], "max": [6, -3, -2], "type": "metal"},
+    {"min": [-3, 0, -18], "max": [3, 4.5, -17.8], "type": "white"},
+    {"min": [5.8, 0, -1], "max": [6, 4, 4], "type": "white"}
+  ],
+  "goo": [
+    {"min": [-6, -3, -11], "max": [6, -1.8, -2]}
+  ],
+  "exit": {"min": [3.5, 0, -17.8], "max": [6, 3, -15]}
+}

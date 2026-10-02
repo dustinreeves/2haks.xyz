@@ -1,0 +1,18 @@
+{
+  "id": "01-through-the-wall",
+  "order": 1,
+  "name": "Through the Wall",
+  "intro": "Welcome to Test Chamber 01. There is a wall in your way. Shoot a blue portal on the white panel to your left and walk through it. The orange portal is already on the other side.",
+  "hint": "White panels hold portals. Dark metal does not.",
+  "gun": "blue",
+  "start": {"pos": [0, 1.6, 3], "yaw": 0},
+  "room": {"min": [-6, 0, -14], "max": [6, 6, 6], "type": "metal", "floor": true},
+  "boxes": [
+    {"min": [-6, 0, -4.5], "max": [6, 6, -3.5], "type": "metal"},
+    {"min": [-6, 0, -2.5], "max": [-5.8, 4, 2.5], "type": "white"}
+  ],
+  "fixed_portals": [
+    {"color": "orange", "pos": [0, 1.05, -4.5], "normal": [0, 0, -1]}
+  ],
+  "exit": {"min": [-1.5, 0, -14], "max": [1.5, 3, -12]}
+}

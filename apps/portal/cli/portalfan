@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""portalfan: look at Portal Fan Lab test chambers and the leaderboard.
+
+  portalfan levels              test chambers on the live server
+  portalfan show <id>           one chamber's details (boxes, buttons, cubes...)
+  portalfan leaderboard         fastest test subjects
+  portalfan validate            check content/levels/*.json for mistakes (run before committing a new level)
+
+levels / show / leaderboard use the API (PORTALFAN_API, default https://portal.2haks.xyz).
+validate reads the level folder (PORTALFAN_LEVELS, default <repo>/content/levels).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(os.path.realpath(__file__)).parent.parent
+sys.path.insert(0, str(ROOT / "api"))
+
+from app.levels import LevelError, load_levels  # noqa: E402
+
+DEFAULT_API = os.environ.get("PORTALFAN_API", "https://portal.2haks.xyz").rstrip("/")
+DEFAULT_LEVELS = Path(os.environ.get("PORTALFAN_LEVELS", ROOT / "content" / "levels"))
+
+
+class CliError(Exception):
+    pass
+
+
+def call(api: str, path: str):
+    req = urllib.request.Request(api + "/api" + path, headers={"User-Agent": "portalfan-cli/1"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.load(e).get("detail", e.reason)
+        except (ValueError, AttributeError):
+            detail = e.reason
+        raise CliError(f"{e.code}: {detail}") from e
+    except urllib.error.URLError as e:
+        raise CliError(f"can't reach {api}: {e.reason}") from e
+
+
+def fmt_time(seconds: float) -> str:
+    m, s = divmod(seconds, 60)
+    return f"{int(m)}:{s:04.1f}"
+
+
+def cmd_levels(args) -> None:
+    for lv in call(args.api, "/levels")["levels"]:
+        print(f"{lv['order']:>2}. {lv['id']:<24} {lv['name']}")
+
+
+def cmd_show(args) -> None:
+    lv = call(args.api, "/levels/" + urllib.parse.quote(args.id))
+    print(f"{lv['order']:>2}. {lv['name']}  ({lv['id']})")
+    print(f"    gun: {lv['gun']}   start: {lv['start']['pos']}")
+    print(f"    boxes: {len(lv['boxes'])}  doors: {len(lv['doors'])}  buttons: {len(lv['buttons'])}"
+          f"  cubes: {len(lv['cubes'])}  goo: {len(lv['goo'])}  fizzlers: {len(lv['fizzlers'])}")
+    print(f"    intro: {lv['intro']}")
+    if lv.get("hint"):
+        print(f"    hint:  {lv['hint']}")
+
+
+def cmd_leaderboard(args) -> None:
+    rows = call(args.api, f"/leaderboard?limit={args.limit}")["leaderboard"]
+    if not rows:
+        print("No times yet.")
+    for r in rows:
+        print(f"{r['rank']:>3}. {r['name']:<12} {fmt_time(r['seconds']):>8}  ({r['chambers']} chambers, {r['date']})")
+
+
+def cmd_validate(args) -> None:
+    levels = load_levels(args.levels)
+    for lv in levels:
+        print(f"OK  {lv['order']:>2}. {lv['id']}")
+    print(f"{len(levels)} valid test chambers in {args.levels}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(prog="portalfan", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--api", default=DEFAULT_API, help=f"API base URL (default {DEFAULT_API})")
+    p.add_argument("--levels", type=Path, default=DEFAULT_LEVELS, help="level folder to validate")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("levels", help="list test chambers").set_defaults(func=cmd_levels)
+    s = sub.add_parser("show", help="one chamber")
+    s.add_argument("id")
+    s.set_defaults(func=cmd_show)
+    s = sub.add_parser("leaderboard", help="fastest times")
+    s.add_argument("--limit", type=int, default=10)
+    s.set_defaults(func=cmd_leaderboard)
+    sub.add_parser("validate", help="check level files").set_defaults(func=cmd_validate)
+
+    args = p.parse_args(argv)
+    try:
+        args.func(args)
+    except (CliError, LevelError, OSError) as e:
+        print(f"portalfan: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

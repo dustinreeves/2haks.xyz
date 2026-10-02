@@ -1,0 +1,26 @@
+{
+  "id": "04-fling",
+  "order": 4,
+  "name": "Fling",
+  "intro": "Test Chamber 04. Speedy thing goes in, speedy thing comes out. I did not invent that rule. I just enjoy watching people learn it.",
+  "hint": "Put a portal on the white floor below, and one high up on the white wall under your feet. Then jump.",
+  "gun": "both",
+  "start": {"pos": [0, 11.6, 4.5], "yaw": 0},
+  "room": {"min": [-8, -3, -26], "max": [8, 14, 6], "type": "metal", "floor": false},
+  "boxes": [
+    {"min": [-8, 0, 3], "max": [8, 10, 6], "type": "metal"},
+    {"min": [-8, 0, 2.8], "max": [8, 9.5, 3], "type": "white"},
+    {"min": [-8, -3, -6.5], "max": [8, -0.1, 2.8], "type": "metal"},
+    {"min": [-3, -0.1, -6], "max": [3, 0, 2.5], "type": "white"},
+    {"min": [-8, -0.1, -6.5], "max": [-3, 0, 2.8], "type": "metal"},
+    {"min": [3, -0.1, -6.5], "max": [8, 0, 2.8], "type": "metal"},
+    {"min": [-3, -0.1, -6.5], "max": [3, 0, -6], "type": "metal"},
+    {"min": [-3, -0.1, 2.5], "max": [3, 0, 2.8], "type": "metal"},
+    {"min": [-8, -4, -12], "max": [8, -3, -6.5], "type": "metal"},
+    {"min": [-8, -3, -26], "max": [8, 0, -12], "type": "metal"}
+  ],
+  "goo": [
+    {"min": [-8, -3, -12], "max": [8, -1.8, -6.5]}
+  ],
+  "exit": {"min": [-2, 0, -26], "max": [2, 3, -23]}
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal Fan Lab</title>
+  <meta name="description" content="An unofficial Portal fan game: solve test chambers with a portal gun.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="scene" aria-label="3D test chamber"></canvas>
+
+  <div id="hud" hidden>
+    <div id="chamber"><span id="chamber-num"></span><strong id="chamber-name"></strong></div>
+    <div id="timer">0:00.0</div>
+    <div id="crosshair" aria-hidden="true"><span class="l"></span><span class="r"></span></div>
+    <p id="controls">WASD move · Space jump · Left click <span class="blue">blue</span> · <span id="orange-help">Right click <span class="orange">orange</span> ·</span> E pick up · R restart chamber · H hint</p>
+  </div>
+
+  <p id="subtitle" role="log" aria-live="polite" hidden><b>GLaDOS:</b> <span id="subtitle-text"></span></p>
+
+  <section id="pause" class="panel" hidden>
+    <h1>Paused</h1>
+    <p>Click to keep testing.</p>
+    <button id="resume-btn" class="big">Resume</button>
+  </section>
+
+  <section id="start" class="panel">
+    <p class="kicker">Enrichment Centre · Fan Wing</p>
+    <h1>Portal Fan Lab</h1>
+    <p>Get through every test chamber using your portal gun. Shoot portals onto <strong>white</strong> walls, walk in one and come out the other.</p>
+    <p class="small">Your companion is <strong>Jim</strong>, a very small core. Jim does not talk.</p>
+    <p id="touch-note" class="error" hidden>This game needs a keyboard and mouse. Try it on a computer!</p>
+    <button id="start-btn" class="big">Begin testing</button>
+    <p id="start-error" class="error" role="alert"></p>
+    <h2>Fastest test subjects</h2>
+    <ol id="leaderboard" class="leaderboard"><li>Loading…</li></ol>
+    <p class="disclaimer">An unofficial fan game made by Tripp. Portal and GLaDOS belong to Valve. This game is not made by or connected to Valve.</p>
+  </section>
+
+  <section id="end" class="panel" hidden>
+    <p class="kicker">All chambers complete</p>
+    <h1>Testing complete!</h1>
+    <p class="final">Time: <strong id="final-time">0:00</strong></p>
+    <p id="final-detail"></p>
+    <form id="name-form">
+      <label for="name">Test subject nickname (no real full names!)</label>
+      <input id="name" maxlength="12" autocomplete="off" required pattern="[A-Za-z0-9][A-Za-z0-9 _\-]*">
+      <button class="big" type="submit">Save my time</button>
+      <p id="name-error" class="error" role="alert"></p>
+    </form>
+    <button id="again-btn" class="big secondary">Test again</button>
+  </section>
+
+  <div id="fade" aria-hidden="true"></div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

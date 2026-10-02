@@ -1,0 +1,30 @@
+{
+  "id": "05-fizzler",
+  "order": 5,
+  "name": "Fizzler",
+  "intro": "Test Chamber 05. That shimmering field is a fizzler. It erases your portals, and it erases cubes. It does not erase test subjects. We checked. Twice.",
+  "hint": "Walk through a portal while holding the cube, and the cube never touches the fizzler.",
+  "gun": "both",
+  "start": {"pos": [0, 1.6, 4], "yaw": 0},
+  "room": {"min": [-6, 0, -16], "max": [6, 6, 6], "type": "metal", "floor": true},
+  "boxes": [
+    {"min": [-6, 0, -12.5], "max": [-1.25, 6, -12], "type": "metal"},
+    {"min": [1.25, 0, -12.5], "max": [6, 6, -12], "type": "metal"},
+    {"min": [-1.25, 3, -12.5], "max": [1.25, 6, -12], "type": "metal"},
+    {"min": [-6, 0, -10], "max": [-5.8, 3, -6], "type": "white"},
+    {"min": [5.8, 0, -2], "max": [6, 4, 3], "type": "white"}
+  ],
+  "fizzlers": [
+    {"min": [-6, 0, -4.1], "max": [6, 6, -3.9]}
+  ],
+  "doors": [
+    {"id": "d1", "min": [-1.25, 0, -12.4], "max": [1.25, 3, -12.1]}
+  ],
+  "buttons": [
+    {"pos": [-3, 0, -9], "opens": ["d1"]}
+  ],
+  "cubes": [
+    {"pos": [2, 0.3, 1]}
+  ],
+  "exit": {"min": [-1.5, 0, -16], "max": [1.5, 3, -14]}
+}

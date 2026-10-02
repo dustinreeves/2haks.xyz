@@ -1,0 +1,28 @@
+{
+  "id": "02-cube-and-button",
+  "order": 2,
+  "name": "Cube and Button",
+  "intro": "Test Chamber 02. You now have both portals: left click for blue, right click for orange. The door opens when something heavy sits on the button. The cube is up on that ledge. Good luck reaching it.",
+  "hint": "Put one portal high on the white wall above the ledge, and one on the white wall you can reach.",
+  "gun": "both",
+  "start": {"pos": [0, 1.6, 4], "yaw": 0},
+  "room": {"min": [-7, 0, -14], "max": [7, 8, 6], "type": "metal", "floor": true},
+  "boxes": [
+    {"min": [-7, 0, -10.5], "max": [-1.25, 8, -10], "type": "metal"},
+    {"min": [1.25, 0, -10.5], "max": [7, 8, -10], "type": "metal"},
+    {"min": [-1.25, 3, -10.5], "max": [1.25, 8, -10], "type": "metal"},
+    {"min": [-7, 0, -8], "max": [-3, 4, -2], "type": "metal"},
+    {"min": [6.8, 0, -5], "max": [7, 4, -1], "type": "white"},
+    {"min": [-7, 4, -7.5], "max": [-6.8, 8, -2.5], "type": "white"}
+  ],
+  "doors": [
+    {"id": "d1", "min": [-1.25, 0, -10.4], "max": [1.25, 3, -10.1]}
+  ],
+  "buttons": [
+    {"pos": [3, 0, -6], "opens": ["d1"]}
+  ],
+  "cubes": [
+    {"pos": [-5, 4.3, -5]}
+  ],
+  "exit": {"min": [-1.5, 0, -14], "max": [1.5, 3, -12]}
+}
