@@ -147,6 +147,18 @@
           "podpile show 1200361736"
         ]
       }
+    },
+    {
+      "slug": "radius",
+      "name": "RADIUS Log Browser",
+      "launch_date": "2026-10-02",
+      "url": "https://radius.2haks.xyz",
+      "description": "Drop in a Windows NPS RADIUS log and browse, filter and export it. Runs entirely in your browser.",
+      "author": "Dustin",
+      "examples": {
+        "api": [],
+        "cli": []
+      }
     }
   ]
 }

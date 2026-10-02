@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RADIUS Log Browser</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>RADIUS Log Browser</h1>
+  <p class="sub">Read a Windows NPS DTS-format log. Your file is parsed in this browser and never uploaded.</p>
+</header>
+
+<section id="drop" tabindex="0">
+  <p><strong>Drop a log file here</strong> or <label class="btn">choose file<input id="file" type="file" hidden></label></p>
+  <p class="hint">NPS DTS XML logs (e.g. <code>IN2410.log</code>). Large files may take a few seconds.</p>
+</section>
+
+<div id="status" role="status"></div>
+
+<section id="tools" hidden>
+  <input id="q" type="search" placeholder="Filter all columns…" aria-label="Filter">
+  <select id="outcome" aria-label="Outcome">
+    <option value="">All outcomes</option>
+    <option value="Access-Accept">Accepted</option>
+    <option value="Access-Reject">Rejected</option>
+  </select>
+  <span id="count"></span>
+  <button id="csv" class="btn">Export CSV</button>
+</section>
+
+<div id="wrap" hidden>
+  <table id="tbl">
+    <thead><tr id="head"></tr></thead>
+    <tbody id="body"></tbody>
+  </table>
+</div>
+<p id="more" hidden></p>
+
+<footer>Web port of <a href="https://github.com/dustinreeves/radius-log-browser">radius-log-browser</a>. Click a row to see the full reason text.</footer>
+<script src="codes.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
