@@ -3,7 +3,7 @@
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
 import {
   applyGravity, castRay, CUBE_HALF, DevConsole, ENGINE, insideBox, moveBody, overlaps, physicsSettings, PortalSystem,
-  DynamicResolution, PostFX, setupLighting, World,
+  DynamicResolution, LAYERS, makeTestSubject, PostFX, setupLighting, World,
 } from "./fireraze/index.js";
 
 const V3 = THREE.Vector3;
@@ -115,7 +115,7 @@ const gunGlowMat = new THREE.MeshBasicMaterial({ color: BLUE });
 const gunGlowParts = [gunGlowMat];
 let gunGlow; // the emitter tip: beams start here
 {
-  const white = new THREE.MeshPhysicalMaterial({ color: 0xd4d7da, roughness: 0.4, clearcoat: 0.3, clearcoatRoughness: 0.3 });
+  const white = new THREE.MeshPhysicalMaterial({ color: 0xaeb2b6, roughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.4 });
   const black = new THREE.MeshStandardMaterial({ color: 0x1b1e21, roughness: 0.5, metalness: 0.4 });
   const grey = new THREE.MeshStandardMaterial({ color: 0x6f777e, roughness: 0.35, metalness: 0.8 });
   const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.35 });
@@ -198,21 +198,67 @@ let gunGlow; // the emitter tip: beams start here
   gun.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
 }
 
+let me = null; // your body (made below, after the gun)
 function setGunColor(color) {
   for (const m of gunGlowParts) m.color.setHex(color).multiplyScalar(1.5); // brighter than white = glows (bloom)
   gun.userData.tipLight.color.setHex(color);
+  if (me) me.setGunColor(color);
 }
 setGunColor(BLUE);
 gun.position.set(0.26, -0.24, -0.56);
 gun.scale.setScalar(0.85);
 camera.add(gun);
+// The gun in front of your eyes is only drawn for your own view; portals show your body instead.
+camera.layers.enable(LAYERS.VIEWMODEL);
+gun.traverse((o) => o.layers.set(LAYERS.VIEWMODEL));
 let recoil = 0;
+
+// Your body: only visible through portals (and in shadows).
+me = makeTestSubject({ gunColor: BLUE });
+scene.add(me.root);
+const portalViewLayers = new THREE.Layers();
+portalViewLayers.set(LAYERS.WORLD);
+portalViewLayers.enable(LAYERS.BODY);
+
+function updateBody(dt) {
+  me.root.visible = !!world.data && state.mode !== "menu";
+  me.root.position.set(player.center.x, player.center.y - PLAYER_HALF.y, player.center.z);
+  me.root.rotation.y = player.yaw;
+  me.update({ speed: Math.hypot(player.vel.x, player.vel.z), onGround: player.onGround, pitch: player.pitch, dt });
+}
 
 const beamMat = new THREE.MeshBasicMaterial({ color: BLUE, transparent: true, opacity: 0.9, depthWrite: false });
 const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1, 6), beamMat);
 beam.visible = false;
 scene.add(beam);
 let beamLife = 0;
+
+// A quick fizzle ring where a portal couldn't open.
+const splashes = [];
+function fizzleSplash(at, normal, color) {
+  const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(2), transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.12, 24), mat);
+  ring.position.copy(at).addScaledVector(normal, 0.02);
+  ring.lookAt(ring.position.clone().add(normal));
+  ring.scale.set(1, 1.6, 1);
+  scene.add(ring);
+  splashes.push({ ring, life: 0.4 });
+}
+function updateSplashes(dt) {
+  for (let i = splashes.length - 1; i >= 0; i--) {
+    const s = splashes[i];
+    s.life -= dt;
+    const k = 1 - s.life / 0.4;
+    s.ring.scale.set(1 + k * 4, (1 + k * 4) * 1.6, 1);
+    s.ring.material.opacity = Math.max(0, 0.9 * (1 - k));
+    if (s.life <= 0) {
+      scene.remove(s.ring);
+      s.ring.geometry.dispose();
+      s.ring.material.dispose();
+      splashes.splice(i, 1);
+    }
+  }
+}
 
 function fireBeam(to, color) {
   recoil = 1;
@@ -480,6 +526,7 @@ con.cvar("sv_portal_placement_never_fail", 0, { help: "Portals stick to any surf
 con.cvar("mat_disable_bloom", 0, { help: "Turn off the glow around bright lights.", min: 0, max: 1, onChange: (v) => { postfx.bloomEnabled = !v; } });
 con.cvar("mat_vignette", 1, { help: "Darker screen corners.", min: 0, max: 1, onChange: (v) => { postfx.vignette = v ? 0.35 : 0; } });
 con.cvar("mat_postprocess_enable", 1, { help: "All picture effects (bloom, colour grade).", min: 0, max: 1, onChange: (v) => { postfx.enabled = !!v; } });
+con.cvar("r_portal_stencil_depth", 3, { help: "How many portal-in-portal levels to draw (more = slower).", min: 1, max: 5, onChange: (v) => { portals.depth = v; } });
 con.cvar("r_dynamic_resolution", 1, { help: "Lower sharpness automatically to keep the game smooth.", min: 0, max: 1, onChange: (v) => { dynres.enabled = !!v; if (!v) { renderer.setPixelRatio(dynres.max); resize(); } } });
 
 con.command("noclip", () => {
@@ -556,6 +603,7 @@ function shoot(color) {
   const box = anySurface ? { ...hit.box, type: "white", door: false } : hit.box;
   const spot = portals.fit(box, end, hit.normal, hit.axis, dir);
   if (spot.error) {
+    fizzleSplash(end, hit.normal, p.color);
     sayOnce(LINES[spot.error]);
     return false;
   }
@@ -1025,7 +1073,7 @@ function frame(realDt, t) {
   world.update(worldTime);
   world.animate(worldDt);
   updateRise(realDt);
-  portals.update(worldTime);
+  portals.update(worldTime, worldDt);
 
   if (beamLife > 0) {
     beamLife -= dt;
@@ -1050,7 +1098,9 @@ function frame(realDt, t) {
   camera.position.y += camRise;
   camera.rotation.set(player.pitch, player.yaw, 0);
   camera.updateMatrixWorld();
-  portals.render(camera);
+  updateBody(realDt);
+  updateSplashes(realDt);
+  portals.render(camera, portalViewLayers);
   postfx.render(scene, camera, dt);
 }
 renderer.setAnimationLoop(() => {

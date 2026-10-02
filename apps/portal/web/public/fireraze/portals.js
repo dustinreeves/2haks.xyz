@@ -21,10 +21,11 @@ const fragmentShader = `
   uniform vec3 uColor;
   uniform float uTime;
   uniform float uLive;
+  uniform float uOpen;   // 0 = closed dot, 1 = fully open (new portals grow open)
   varying vec2 vUv;
   void main() {
     vec2 p = (vUv - 0.5) * 2.0;
-    float r = length(p);
+    float r = length(p) / max(uOpen, 0.001);
     float a = atan(p.y, p.x);
     // A living edge: the rim ripples and little sparks run around it.
     float wob = 0.03 * sin(a * 7.0 + uTime * 3.0) + 0.02 * sin(a * 13.0 - uTime * 5.0);
@@ -35,6 +36,9 @@ const fragmentShader = `
     vec3 inside;
     if (uLive > 0.5) {
       inside = texture2D(tView, gl_FragCoord.xy / uRes).rgb;
+      // A soft coloured haze just inside the rim, flickering a little.
+      float haze = smoothstep(0.55, 0.85 + wob, r) * (0.55 + 0.15 * sin(a * 5.0 - uTime * 2.0));
+      inside = mix(inside, uColor * 0.9, haze * 0.6);
     } else {
       float swirl = sin(a * 3.0 + r * 9.0 - uTime * 4.0) * 0.5 + 0.5;
       inside = mix(uColor * 0.2, uColor * 0.9, swirl * (1.0 - r * 0.4));
@@ -54,6 +58,7 @@ export class PortalSystem {
     this.orange = this._make("orange", colors.orange);
     this.all = [this.blue, this.orange];
     this.onChange = () => {};
+    this.depth = 3; // portal-in-portal levels (console: r_portal_stencil_depth)
     this._virtual = new THREE.PerspectiveCamera();
     this._virtual.matrixAutoUpdate = false;
     this._virtual.matrixWorldAutoUpdate = false;
@@ -61,14 +66,17 @@ export class PortalSystem {
   }
 
   _make(name, color) {
-    const rt = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: true });
+    // Two render targets per portal: while one level of the portal-in-portal view is drawn
+    // into one, the portals in that picture show the level drawn just before (the other one).
+    const rts = [0, 1].map(() => new THREE.WebGLRenderTarget(4, 4, { depthBuffer: true, type: THREE.HalfFloatType }));
     const mat = new THREE.ShaderMaterial({
       uniforms: {
-        tView: { value: rt.texture },
+        tView: { value: rts[1].texture },
         uRes: { value: new THREE.Vector2(1, 1) },
         uColor: { value: new THREE.Color(color) },
         uTime: { value: 0 },
         uLive: { value: 0 },
+        uOpen: { value: 1 },
       },
       vertexShader,
       fragmentShader,
@@ -79,9 +87,22 @@ export class PortalSystem {
     const light = new THREE.PointLight(color, 4, 3.5);
     light.position.z = 0.5;
     mesh.add(light);
+
+    // Glowing specks drifting around the edge.
+    const count = 70;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    const specks = new THREE.Points(geo, new THREE.PointsMaterial({
+      color: new THREE.Color(color).multiplyScalar(2.2), size: 0.035, transparent: true, opacity: 0.85, depthWrite: false,
+    }));
+    specks.userData.seeds = Array.from({ length: count }, (_, i) => ({
+      angle: (i / count) * Math.PI * 2, speed: 0.3 + ((i * 37) % 11) / 11, out: ((i * 53) % 17) / 17,
+    }));
+    mesh.add(specks);
+
     this.scene.add(mesh);
     return {
-      name, color, rt, mat, mesh, placed: false, fixed: false,
+      name, color, rts, mat, mesh, specks, placed: false, fixed: false, open: 1,
       pos: new V3(), normal: new V3(), up: new V3(), right: new V3(),
       matrix: new THREE.Matrix4(), inv: new THREE.Matrix4(), hosts: [],
     };
@@ -150,6 +171,7 @@ export class PortalSystem {
     p.mesh.visible = true;
     p.placed = true;
     p.fixed = fixed;
+    p.open = fixed ? 1 : 0; // shot portals grow open
     // Every solid box just behind the portal gets a "hole" while something passes through.
     const a = pos.clone().addScaledVector(normal, -0.05);
     const b = pos.clone().addScaledVector(normal, -0.6);
@@ -235,35 +257,81 @@ export class PortalSystem {
   resize(viewScale = 0.75) {
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     for (const p of this.all) {
-      p.rt.setSize(Math.max(1, Math.round(size.x * viewScale)), Math.max(1, Math.round(size.y * viewScale)));
+      for (const rt of p.rts) rt.setSize(Math.max(1, Math.round(size.x * viewScale)), Math.max(1, Math.round(size.y * viewScale)));
       p.mat.uniforms.uRes.value.copy(size);
     }
   }
 
-  update(t) {
-    for (const p of this.all) p.mat.uniforms.uTime.value = t;
+  update(t, dt = 1 / 60) {
+    for (const p of this.all) {
+      p.mat.uniforms.uTime.value = t;
+      p.open = Math.min(1, p.open + dt * 5); // ~0.2 s to open
+      p.mat.uniforms.uOpen.value = 1 - (1 - p.open) ** 3;
+      if (!p.mesh.visible) continue;
+      // Specks circle the rim and drift a little way out, then start again.
+      const pos = p.specks.geometry.attributes.position;
+      p.specks.userData.seeds.forEach((s, i) => {
+        const a = s.angle + t * s.speed;
+        const drift = (t * 0.25 * s.speed + s.out) % 1;
+        const rr = (1.0 + drift * 0.12) * p.mat.uniforms.uOpen.value;
+        pos.setXYZ(i, Math.cos(a) * (PORTAL_W / 2) * rr, Math.sin(a) * (PORTAL_H / 2) * rr, 0.02 + drift * 0.15);
+      });
+      pos.needsUpdate = true;
+      p.specks.material.opacity = 0.85 * p.mat.uniforms.uOpen.value;
+    }
   }
 
-  /** Render what each visible portal looks through to. Call before the main render. */
-  render(camera) {
-    for (const p of this.all) p.mat.uniforms.uLive.value = 0;
+  /**
+   * Render what each visible portal looks through to. Call before the main render.
+   *
+   * Portal-in-portal: level `depth` (deepest) is drawn first, then each level up shows the one
+   * below it inside its portals, down to level 1, which is what you see. Each portal keeps two
+   * render targets and swaps them, because a picture can't be read and drawn at the same time.
+   */
+  render(camera, viewLayers = null) {
+    const all = this.all;
+    for (const p of all) p.mat.uniforms.uLive.value = 0;
     if (!this.linked) return;
     const pv = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this._frustum.setFromProjectionMatrix(pv);
-    const cam = this._virtual;
-    for (const p of this.all) {
+    const onScreen = all.filter((p) => {
       p.mesh.updateMatrixWorld();
-      if (!this._frustum.intersectsObject(p.mesh)) continue;
-      const q = this.other(p);
-      cam.matrixWorld.multiplyMatrices(this.through(p, q), camera.matrixWorld);
-      cam.matrixWorldInverse.copy(cam.matrixWorld).invert();
-      cam.projectionMatrix.copy(camera.projectionMatrix);
-      obliqueClip(cam, q.normal, q.pos);
-      this.renderer.setRenderTarget(p.rt);
-      this.renderer.render(this.scene, cam);
+      return this._frustum.intersectsObject(p.mesh);
+    });
+    if (!onScreen.length) return;
+    const visible = all; // either portal can appear inside the other, so draw both
+
+    const depth = Math.max(1, Math.round(this.depth || 1));
+    const renderer = this.renderer;
+    const shadows = renderer.shadowMap.autoUpdate;
+    renderer.shadowMap.autoUpdate = false; // reuse this frame's shadows for the extra views
+    const cam = this._virtual;
+    if (viewLayers) cam.layers.mask = viewLayers.mask;
+    const steps = new Map(visible.map((p) => [p, this.through(p, this.other(p))]));
+
+    for (let level = depth; level >= 1; level--) {
+      // In this level's pictures, portals show the level below (or a swirl at the bottom).
+      for (const p of all) {
+        p.mat.uniforms.uLive.value = level < depth && visible.includes(p) ? 1 : 0;
+        p.mat.uniforms.tView.value = p.rts[(level + 1) % 2].texture;
+      }
+      for (const p of visible) {
+        const q = this.other(p);
+        cam.matrixWorld.copy(camera.matrixWorld);
+        for (let k = 0; k < level; k++) cam.matrixWorld.premultiply(steps.get(p));
+        cam.matrixWorldInverse.copy(cam.matrixWorld).invert();
+        cam.projectionMatrix.copy(camera.projectionMatrix);
+        obliqueClip(cam, q.normal, q.pos);
+        renderer.setRenderTarget(p.rts[level % 2]);
+        renderer.render(this.scene, cam);
+      }
     }
-    this.renderer.setRenderTarget(null);
-    for (const p of this.all) p.mat.uniforms.uLive.value = 1;
+    renderer.setRenderTarget(null);
+    renderer.shadowMap.autoUpdate = shadows;
+    for (const p of all) {
+      p.mat.uniforms.tView.value = p.rts[1].texture; // level 1
+      p.mat.uniforms.uLive.value = visible.includes(p) ? 1 : 0;
+    }
   }
 }
 

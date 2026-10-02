@@ -80,6 +80,7 @@ export function ceilingLights(group, room, { spacing = 6, intensity = 130, shado
       spot.target.position.set(x, room.min.y, z);
       if (lights.length < shadowCount) {
         spot.castShadow = true;
+        spot.shadow.camera.layers.enable(1); // the player's body casts shadows too
         spot.shadow.mapSize.set(1024, 1024);
         spot.shadow.bias = -0.0004;
         spot.shadow.normalBias = 0.03;

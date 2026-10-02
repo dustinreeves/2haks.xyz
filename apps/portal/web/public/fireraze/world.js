@@ -690,6 +690,7 @@ export class World {
     sun.position.set(hx, r.max.y + 0.5, hz);
     sun.target.position.set(hx - 1, r.min.y, hz + 1);
     sun.castShadow = true;
+    sun.shadow.camera.layers.enable(1);
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.bias = -0.0004;
     const beamH = r.max.y - r.min.y;

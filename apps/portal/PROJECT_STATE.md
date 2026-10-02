@@ -19,6 +19,9 @@
 
 - [x] More Portal-like look: brighter lighting, light-grey grid ceiling panels (`TEXTURES.ceiling`), Portal-style chamber sign (number, progress bar, icons for what's in the room) on the right wall near the start, rippling/sparkling portal rims, clean HUD (controls line fades after 9 s, smaller see-through labels)
 
+- [x] Valve-style portals: portal-in-portal views (recursive, ping-pong render targets; cvar `r_portal_stencil_depth`, default 3), portals grow open, soft coloured haze inside the rim, glowing specks around the edge, fizzle splash when a shot fails. Extra portal views reuse the frame's shadow maps (speed)
+- [x] Player model (`fireraze/character.js`, our own "test subject": orange jumpsuit tied at the waist, white top, long-fall boots, gun in hand) with walk/air poses. Layers: body only visible in portal views + shadows; the first-person gun only in your own view
+
 ## Tested in the browser (dev mode)
 - Chamber 01 start to finish: shot blue, walked through, came out of the orange portal, reached the exit, server accepted the time.
 - Chamber 02: portals to the ledge, picked up the cube, carried it down; the button opened the door.
