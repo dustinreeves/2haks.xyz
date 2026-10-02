@@ -114,6 +114,20 @@
           "gundesigner parts"
         ]
       }
+    },
+    {
+      "slug": "chemoquiz",
+      "name": "Chemo Crew Quiz",
+      "launch_date": "2026-10-02",
+      "url": "https://chemoquiz.2haks.xyz",
+      "description": "A chemotherapy quiz made for Courtney's nurse friends: Diedra, Jessica, Jennifer, Austina, Jody, Lisa, Laura, Wendy and Elizabeth. Pick your name, answer 12 random questions (extravasations, nadirs, antidotes, hazardous-drug safety), and learn something from every explanation.",
+      "author": "Dustin",
+      "examples": {
+        "api": [],
+        "cli": [
+          "curl -s https://chemoquiz.2haks.xyz/questions.js | grep -c \"q:\""
+        ]
+      }
     }
   ]
 }

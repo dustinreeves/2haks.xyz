@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chemo Crew Quiz</title>
+  <meta name="description" content="A chemotherapy quiz made for Courtney's nurse friends. 12 questions, answers explained, shout-outs included.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%9C%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="quiz.js"></script>
+</head>
+<body>
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
+
+  <main class="wrap">
+    <section id="start" class="screen card">
+      <p class="eyebrow">For Courtney's nurse friends 💜</p>
+      <h1>Chemo Crew Quiz</h1>
+      <p class="lead">
+        12 questions on chemotherapy: extravasations, nadirs, antidotes and all the little
+        things that keep patients safe. Every answer comes with a quick explanation.
+      </p>
+      <p class="crew-line">Starring <strong id="crew-list"></strong>.</p>
+      <h2>Who's playing?</h2>
+      <div id="players" class="players"></div>
+      <p class="small">A new random set from <span id="bank-size"></span> questions every round.</p>
+    </section>
+
+    <section id="play" class="screen card" hidden>
+      <div class="progress-row">
+        <span id="progress-text"></span>
+        <span id="score-text"></span>
+      </div>
+      <div class="progress"><span id="progress-fill"></span></div>
+      <p id="dedication" class="dedication"></p>
+      <h2 id="question" class="question" tabindex="-1"></h2>
+      <div id="choices" class="choices"></div>
+      <div id="feedback" class="feedback" hidden aria-live="polite">
+        <p id="verdict" class="verdict"></p>
+        <p id="why" class="why"></p>
+        <button type="button" id="next" class="button primary"></button>
+      </div>
+    </section>
+
+    <section id="results" class="screen card" hidden>
+      <p class="eyebrow">Your score</p>
+      <p id="final-score" class="final-score"></p>
+      <h2 id="rank" class="rank"></h2>
+      <p id="blurb" class="lead"></p>
+      <div class="shoutout">
+        <h3>Shout-out to the whole crew 💜</h3>
+        <ul id="crew" class="crew"></ul>
+        <p>Thank you for taking such good care of everyone. You're amazing.</p>
+      </div>
+      <div class="buttons">
+        <button type="button" id="again" class="button primary">Play again (new questions)</button>
+        <button type="button" id="switch" class="button">Change player</button>
+      </div>
+    </section>
+
+    <footer>
+      Just for fun. Always follow your own institution's policies and protocols.<br>
+      Made by Dustin on <a href="https://2haks.xyz">2haks.xyz</a>.
+    </footer>
+  </main>
+</body>
+</html>

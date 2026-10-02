@@ -1,0 +1,12 @@
+
+chemoquiz.2haks.xyz {
+	encode zstd gzip
+	root * /opt/apps/chemoquiz/public
+	file_server
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+		Cache-Control no-cache
+	}
+}
