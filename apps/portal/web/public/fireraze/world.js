@@ -10,8 +10,10 @@ const V3 = THREE.Vector3;
 export const CUBE_HALF = new V3(0.3, 0.3, 0.3);
 
 const MATS = {
-  white: new THREE.MeshStandardMaterial({ map: TEXTURES.white, roughness: 0.8 }),
-  metal: new THREE.MeshStandardMaterial({ map: TEXTURES.metal, roughness: 0.6, metalness: 0.3 }),
+  white: new THREE.MeshStandardMaterial({ ...TEXTURES.white, roughness: 0.75 }),
+  // Low metalness on purpose: fully metallic surfaces only reflect, and look black in a dim room.
+  metal: new THREE.MeshStandardMaterial({ ...TEXTURES.metal, roughness: 0.6, metalness: 0.12 }),
+  floor: new THREE.MeshStandardMaterial({ ...TEXTURES.floor, roughness: 0.85, metalness: 0.1 }),
   glass: new THREE.MeshStandardMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false }),
 };
 const plainVertex = `
@@ -50,8 +52,14 @@ const FIZZLER = new THREE.ShaderMaterial({
   depthWrite: false,
   side: THREE.DoubleSide,
 });
-const DOOR = new THREE.MeshStandardMaterial({ map: TEXTURES.door, roughness: 0.5 });
-const CUBE = new THREE.MeshStandardMaterial({ map: TEXTURES.cube, roughness: 0.5 });
+const DOOR = new THREE.MeshStandardMaterial({ ...TEXTURES.door, roughness: 0.45, metalness: 0.2 });
+const CUBE = new THREE.MeshStandardMaterial({ ...TEXTURES.cube, roughness: 0.6, metalness: 0.3 });
+// Which material each face group uses (sides, top, bottom). Metal boxes get floor tiles on top.
+const FACES = {
+  white: [MATS.white, MATS.white, MATS.white],
+  metal: [MATS.metal, MATS.floor, MATS.metal],
+  glass: [MATS.glass, MATS.glass, MATS.glass],
+};
 const BUTTON_BASE = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6 });
 const OBS_INSIDE = new THREE.MeshBasicMaterial({ color: 0x0b0d10 });
 const OBS_GLASS = new THREE.MeshStandardMaterial({
@@ -90,7 +98,7 @@ export class World {
     const size = new V3().subVectors(b.max, b.min);
     const mesh = new THREE.Mesh(tiledBox(size), material);
     mesh.position.copy(b.min).addScaledVector(size, 0.5);
-    mesh.castShadow = material !== MATS.glass;
+    mesh.castShadow = material !== FACES.glass;
     mesh.receiveShadow = true;
     this.group.add(mesh);
     return mesh;
@@ -161,7 +169,7 @@ export class World {
     if (data.room.floor) shell.push({ min: [r.min.x, r.min.y - t, r.min.z], max: [r.max.x, r.min.y, r.max.z] });
     for (const raw of [...shell.map((b) => ({ ...b, type: data.room.type })), ...data.boxes]) {
       const s = { ...box3(raw), type: raw.type };
-      s.mesh = this._box(s, MATS[s.type]);
+      s.mesh = this._box(s, FACES[s.type]);
       this.solids.push(s);
     }
 

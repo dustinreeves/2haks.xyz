@@ -210,28 +210,93 @@ function fireBeam(to, color) {
 
 // ---------- Jim, the little core who never talks ----------
 
-const jim = new THREE.Group();
-const jimEyeMat = new THREE.MeshBasicMaterial({ color: 0xffc640 });
+// Jim is a personality core hanging from an arm on a ceiling rail. He slides along the rail to
+// follow you, his big eye watches you, and he blinks. Built from our own shapes. +z is his front.
+const JIM_EYE = 0x3fa9ff;
+const jimRig = new THREE.Group();   // carriage on the rail + arm + core
+const jim = new THREE.Group();      // the core itself (turns to look at you)
+const jimArm = new THREE.Group();
+const jimEyeMat = new THREE.MeshBasicMaterial({ color: JIM_EYE });
+const jimLids = [];
+const jimEyeLight = new THREE.PointLight(JIM_EYE, 1.2, 2.5);
 {
-  jim.add(new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, 24, 16),
-    new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.35, metalness: 0.6 }),
-  ));
-  jim.add(new THREE.Mesh(
-    new THREE.TorusGeometry(0.205, 0.022, 8, 32),
-    new THREE.MeshStandardMaterial({ color: 0x4a5056, roughness: 0.5, metalness: 0.5 }),
-  ));
-  const eye = new THREE.Mesh(new THREE.CircleGeometry(0.075, 24), jimEyeMat);
-  eye.position.z = 0.196;
-  jim.add(eye);
-  const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.028, 16), new THREE.MeshBasicMaterial({ color: 0x1d2126 }));
-  pupil.position.z = 0.199;
-  jim.add(pupil);
-  const glow = new THREE.PointLight(0xffc640, 1.2, 2);
-  glow.position.z = 0.35;
-  jim.add(glow);
+  const shellMat = new THREE.MeshStandardMaterial({ color: 0xd8dde1, roughness: 0.35, metalness: 0.55 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.45, metalness: 0.7 });
+  const greyMat = new THREE.MeshStandardMaterial({ color: 0x7c848b, roughness: 0.4, metalness: 0.8 });
+
+  // Two shell halves with a dark gap between them, and a dark face plate around the eye.
+  for (const side of [-1, 1]) {
+    const half = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 16, side > 0 ? 0 : Math.PI, Math.PI), shellMat);
+    half.position.x = side * 0.006;
+    jim.add(half);
+  }
+  jim.add(new THREE.Mesh(new THREE.SphereGeometry(0.212, 24, 16), darkMat));
+  const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.17, 0.05, 32), darkMat);
+  plate.rotation.x = Math.PI / 2;
+  plate.position.z = 0.22;
+  jim.add(plate);
+
+  // The big eye: a glowing lens inside a grey ring.
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 12, 32), greyMat);
+  ring.position.z = 0.25;
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.095, 32), jimEyeMat);
+  lens.position.z = 0.247;
+  const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.035, 24), new THREE.MeshBasicMaterial({ color: 0x0c1a2a }));
+  pupil.position.z = 0.249;
+  jim.add(ring, lens, pupil);
+  jimEyeLight.position.z = 0.4;
+  jim.add(jimEyeLight);
+
+  // Eyelids: two dark shutters that slide over the eye to blink (scale.y 0 = open, 1 = shut).
+  for (const side of [1, -1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(0, side * 0.1, 0.256);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.01), darkMat);
+    lid.position.y = -side * 0.05;
+    pivot.add(lid);
+    pivot.scale.y = 0.001;
+    jim.add(pivot);
+    jimLids.push(pivot);
+  }
+
+  // Handles above and below (like a carrying handle on a ball).
+  for (const side of [1, -1]) {
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.02, 8, 24, Math.PI), greyMat);
+    handle.rotation.y = Math.PI / 2;
+    if (side < 0) handle.rotation.z = Math.PI;
+    handle.position.y = side * 0.2;
+    jim.add(handle);
+  }
+
+  // Arm from the rail down to the top handle; its length changes per room (scaled in updateJim).
+  const armMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 12), darkMat);
+  armMesh.position.y = -0.5;
+  jimArm.add(armMesh);
+  const carriage = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.45), greyMat);
+  const clamp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), darkMat);
+  clamp.position.y = -0.1;
+  jimRig.add(carriage, clamp, jimArm, jim);
+  jimRig.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 }
-scene.add(jim);
+scene.add(jimRig);
+const jimRail = { x: 0, y: 6, zMin: -5, zMax: 5, floor: 0 };
+
+// A ceiling rail along the room, slightly to the left of where you start.
+function buildJimRail(data) {
+  const r = data.room;
+  const x = THREE.MathUtils.clamp(data.start.pos[0] - 2.5, r.min[0] + 1, r.max[0] - 1);
+  Object.assign(jimRail, { x, y: r.max[1] - 0.15, zMin: r.min[2] + 0.8, zMax: r.max[2] - 0.8, floor: r.min[1] });
+  const len = r.max[2] - r.min[2];
+  const mat = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.4, metalness: 0.8 });
+  const beamMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, len), mat);
+  beamMesh.position.set(x, r.max[1] - 0.06, (r.min[2] + r.max[2]) / 2);
+  const groove = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, len), new THREE.MeshBasicMaterial({ color: 0x0b0d10 }));
+  groove.position.set(x, r.max[1] - 0.125, (r.min[2] + r.max[2]) / 2);
+  beamMesh.castShadow = true;
+  beamMesh.userData.ownMaterial = true;
+  world.group.add(beamMesh, groove);
+  jimRig.position.set(x, jimRail.y, THREE.MathUtils.clamp(data.start.pos[2] - 3, jimRail.zMin, jimRail.zMax));
+}
 const jimMood = { kind: "idle", time: 0 };
 function jimReact(kind, seconds = 1.4) {
   jimMood.kind = kind;
@@ -276,6 +341,7 @@ function lookDir(out = new V3()) {
 
 function loadWorld(data, chamberNumber = 1, chamberCount = 1) {
   world.build(data, { chamberNumber, chamberCount });
+  buildJimRail(data);
   portals.clearAll();
   for (const f of data.fixed_portals) {
     const normal = new V3(...f.normal);
@@ -471,23 +537,43 @@ function updateHeldCube(dt) {
   if (c.center.distanceTo(target) > 2.5) toggleHold();
 }
 
+let blinkTimer = 3;
 function updateJim(dt, t) {
-  const forward = new V3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-  const right = new V3(-forward.z, 0, forward.x);
-  const target = eyePos().addScaledVector(forward, 3.2).addScaledVector(right, -1.9);
-  target.y -= 0.35 - (reducedMotion ? 0 : Math.sin(t * 2.2) * 0.06);
   if (jimMood.time > 0) {
     jimMood.time -= dt;
-    if (jimMood.kind === "sad") target.y -= 0.35;
-    if (jimMood.kind === "happy" && !reducedMotion) target.y += Math.abs(Math.sin(t * 10)) * 0.25;
     if (jimMood.time <= 0) jimMood.kind = "idle";
   }
-  if (jim.position.distanceTo(target) > 8) jim.position.copy(target); // catch up after portals
-  jim.position.lerp(target, Math.min(1, dt * 4));
-  jim.lookAt(eyePos());
-  if (!reducedMotion && jimMood.kind === "happy") jim.rotateZ(t * 12);
-  if (jimMood.kind === "sad") jim.rotateX(0.5);
-  jimEyeMat.color.setHex(jimMood.kind === "sad" ? 0x8a6a20 : 0xffc640);
+  // Slide along the rail to stay a little ahead of you.
+  const eye = eyePos();
+  const ahead = -Math.cos(player.yaw) * 2.5;
+  const z = THREE.MathUtils.clamp(eye.z + ahead, jimRail.zMin, jimRail.zMax);
+  if (Math.abs(jimRig.position.z - z) > 12) jimRig.position.z = z; // after a long portal jump
+  jimRig.position.set(jimRail.x, jimRail.y, THREE.MathUtils.lerp(jimRig.position.z, z, Math.min(1, dt * 2)));
+
+  // Hang a bit above your eye level (the arm stretches to reach), but never too low.
+  let hang = THREE.MathUtils.clamp(jimRail.y - (eye.y + 0.7), 1.0, jimRail.y - jimRail.floor - 1.4);
+  if (jimMood.kind === "sad") hang += 0.3;
+  if (jimMood.kind === "happy" && !reducedMotion) hang -= Math.abs(Math.sin(t * 8)) * 0.15;
+  const corePos = jimRig.position.clone().setY(jimRail.y - hang);
+  jim.position.set(0, -hang, 0);
+  jimArm.scale.y = Math.max(0.01, hang - 0.2);
+
+  // Look at you (in the rig's space), with a little wobble when happy.
+  jim.lookAt(eye);
+  if (!reducedMotion) {
+    if (jimMood.kind === "happy") jim.rotateZ(Math.sin(t * 14) * 0.35);
+    else jim.rotateZ(Math.sin(t * 1.3) * 0.06);
+  }
+  if (jimMood.kind === "sad") jim.rotateX(0.45);
+
+  // Blink every few seconds; half-close the lids when sad.
+  blinkTimer -= dt;
+  if (blinkTimer < -0.15) blinkTimer = 2.5 + Math.random() * 3;
+  const shut = blinkTimer < 0 ? 1 : jimMood.kind === "sad" ? 0.55 : 0.001;
+  for (const lid of jimLids) lid.scale.y = THREE.MathUtils.lerp(lid.scale.y, shut, Math.min(1, dt * 25));
+  jimEyeMat.color.setHex(jimMood.kind === "sad" ? 0x1c4d77 : JIM_EYE);
+  jimEyeLight.intensity = jimMood.kind === "sad" ? 0.4 : 1.2;
+  return corePos;
 }
 
 // ---------- game flow ----------
@@ -519,7 +605,6 @@ async function loadChamber(i) {
   state.index = i;
   $("chamber-num").textContent = `Test chamber ${String(i + 1).padStart(2, "0")} / ${String(state.levels.length).padStart(2, "0")}`;
   $("chamber-name").textContent = data.name;
-  jim.position.copy(eyePos());
   state.mode = "playing";
   say(data.intro);
 }
