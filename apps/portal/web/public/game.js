@@ -749,6 +749,31 @@ function die(lines) {
   resetChamber();
 }
 
+// Elevator rides: the camera rises out of a finished chamber and drops into the next one.
+let camRise = 0;
+let riseAnim = null;
+function animateRise(from, to, seconds) {
+  return new Promise((resolve) => {
+    if (reducedMotion) seconds = Math.min(seconds, 0.2);
+    camRise = from;
+    riseAnim = { from, to, seconds, t: 0, resolve };
+  });
+}
+function updateRise(dt) {
+  if (!riseAnim) return;
+  riseAnim.t += dt;
+  const k = Math.min(1, riseAnim.t / riseAnim.seconds);
+  const ease = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+  camRise = THREE.MathUtils.lerp(riseAnim.from, riseAnim.to, ease);
+  if (k >= 1) {
+    const done = riseAnim.resolve;
+    riseAnim = null;
+    done();
+  }
+}
+
+// Loads a chamber and starts the arrival ride. Returns as soon as the chamber is built,
+// so the screen can fade in while you are still riding down.
 async function loadChamber(i) {
   state.mode = "loading";
   const data = await api(`/levels/${encodeURIComponent(state.levels[i])}`);
@@ -756,8 +781,12 @@ async function loadChamber(i) {
   state.index = i;
   $("chamber-num").textContent = `Test chamber ${String(i + 1).padStart(2, "0")} / ${String(state.levels.length).padStart(2, "0")}`;
   $("chamber-name").textContent = data.name;
-  state.mode = "playing";
   say(data.intro);
+  animateRise(3.2, 0, 1.8).then(() => {
+    if (state.index !== i || state.mode !== "loading") return;
+    world.openArrivalTube();
+    state.mode = "playing";
+  });
 }
 
 let completing = false;
@@ -781,6 +810,7 @@ async function chamberComplete() {
       endRun();
     } else {
       say(pick(LINES.done));
+      await animateRise(0, 3.5, 1.4); // ride the exit lift up
       await fade(true);
       await loadChamber(state.index + 1);
       await fade(false);
@@ -984,6 +1014,8 @@ function frame(realDt, t) {
   if (state.mode === "menu") player.yaw = Math.sin(t * 0.15) * 0.6;
 
   world.update(worldTime);
+  world.animate(worldDt);
+  updateRise(realDt);
   portals.update(worldTime);
 
   if (beamLife > 0) {
@@ -1006,6 +1038,7 @@ function frame(realDt, t) {
   }
 
   camera.position.copy(eyePos());
+  camera.position.y += camRise;
   camera.rotation.set(player.pitch, player.yaw, 0);
   camera.updateMatrixWorld();
   portals.render(camera);

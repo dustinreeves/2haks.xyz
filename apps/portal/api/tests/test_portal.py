@@ -48,7 +48,8 @@ def write_levels(folder: Path, *lvs):
 
 def test_good_level():
     lv = validate_level(LEVEL)
-    assert lv["room"]["floor"] is True and lv["hint"] == ""
+    assert lv["room"]["floor"] is True and lv["hint"] == "" and lv["theme"] == "clean"
+    assert validate_level(level(theme="overgrown"))["theme"] == "overgrown"
 
 
 @pytest.mark.parametrize("change", [
@@ -62,6 +63,7 @@ def test_good_level():
     {"fixed_portals": [{"color": "orange", "pos": [0, 1, 0], "normal": [0, 0, -1]}]},
     {"gun": "blue"},
     {"surprise": True},
+    {"theme": "lava-world"},
 ])
 def test_bad_levels_rejected(change):
     with pytest.raises(LevelError):

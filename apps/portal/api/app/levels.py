@@ -70,8 +70,9 @@ def _inside(point: list[float], box: dict) -> bool:
 
 ALLOWED_KEYS = {
     "id", "order", "name", "intro", "hint", "gun", "start", "room", "boxes", "fixed_portals",
-    "doors", "buttons", "cubes", "goo", "fizzlers", "exit",
+    "doors", "buttons", "cubes", "goo", "fizzlers", "exit", "theme",
 }
+THEMES = {"clean", "overgrown"}
 
 
 def validate_level(raw: object, where: str = "level") -> dict:
@@ -89,6 +90,10 @@ def validate_level(raw: object, where: str = "level") -> dict:
     order = raw.get("order")
     if isinstance(order, bool) or not isinstance(order, int) or not 1 <= order <= 99:
         raise LevelError(f"{where}.order: must be a whole number 1-99")
+
+    theme = raw.get("theme", "clean")
+    if theme not in THEMES:
+        raise LevelError(f"{where}.theme: must be one of {sorted(THEMES)}")
 
     gun = raw.get("gun")
     if gun not in {"blue", "both"}:
@@ -116,6 +121,7 @@ def validate_level(raw: object, where: str = "level") -> dict:
         "intro": _text(raw, "intro", where, 400),
         "hint": _text(raw, "hint", where, 200, required=False),
         "gun": gun,
+        "theme": theme,
         "start": {"pos": _vec(start.get("pos"), f"{where}.start.pos"), "yaw": float(yaw)},
         "room": {**room_box, "floor": floor},
         "boxes": [_box(b, f"{where}.boxes[{i}]", BOX_TYPES)

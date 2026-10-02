@@ -45,7 +45,7 @@ const GradeShader = {
 };
 
 export class PostFX {
-  constructor(renderer, scene, camera, { bloom = 0.5, threshold = 0.92, radius = 0.55 } = {}) {
+  constructor(renderer, scene, camera, { bloom = 0.5, threshold = 1.05, radius = 0.55 } = {}) {
     this.renderer = renderer;
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });

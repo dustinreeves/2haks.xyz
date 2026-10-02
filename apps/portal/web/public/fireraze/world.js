@@ -66,6 +66,43 @@ const OBS_GLASS = new THREE.MeshStandardMaterial({
 });
 const OBS_FRAME = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.5, metalness: 0.6 });
 
+const ASSEMBLE_TIME = 0.6; // seconds for each wall/platform to slide into place
+
+// Repeatable random numbers (the same chamber always grows the same plants).
+function seeded(seed) {
+  let s = seed % 2147483647 || 1;
+  return () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+}
+
+const LEAF_TEX = canvasTexture(128, (g, s) => {
+  g.fillStyle = "#4f8a2f";
+  g.beginPath();
+  g.moveTo(s * 0.5, s * 0.04);
+  g.quadraticCurveTo(s * 0.98, s * 0.45, s * 0.5, s * 0.96);
+  g.quadraticCurveTo(s * 0.02, s * 0.45, s * 0.5, s * 0.04);
+  g.fill();
+  g.strokeStyle = "#2f5a1a";
+  g.lineWidth = 3;
+  g.beginPath(); g.moveTo(s * 0.5, s * 0.1); g.lineTo(s * 0.5, s * 0.92); g.stroke();
+});
+LEAF_TEX.wrapS = LEAF_TEX.wrapT = THREE.ClampToEdgeWrapping;
+
+const MOSS_TEX = canvasTexture(256, (g, s) => {
+  const rand = seeded(5);
+  for (let i = 0; i < 900; i++) {
+    const a = rand() * Math.PI * 2;
+    const d = Math.sqrt(rand()) * s * 0.45;
+    const x = s / 2 + Math.cos(a) * d;
+    const y = s / 2 + Math.sin(a) * d;
+    const fade = 1 - d / (s * 0.45);
+    g.fillStyle = `rgba(${50 + rand() * 40}, ${90 + rand() * 50}, ${30 + rand() * 20}, ${0.35 * fade + 0.1})`;
+    g.beginPath();
+    g.arc(x, y, 2 + rand() * 7, 0, Math.PI * 2);
+    g.fill();
+  }
+});
+MOSS_TEX.wrapS = MOSS_TEX.wrapT = THREE.ClampToEdgeWrapping;
+
 // ---------- the cube: a real 3D model with depth (0.6 m across) ----------
 // Dark body, raised corner bumpers joined by edge rails, a sunken light panel on every side,
 // and a raised ring with a glowing centre on each panel.
@@ -147,6 +184,10 @@ export class World {
     this.buttons = [];
     this.cubes = [];
     this.exit = null;
+    this.assembly = [];
+    this.assembleTime = 0;
+    this.tube = null;
+    this.dust = null;
   }
 
   clear() {
@@ -231,15 +272,37 @@ export class World {
       { min: [r.min.x, r.max.y, r.min.z], max: [r.max.x, r.max.y + t, r.max.z] },
     ];
     if (data.room.floor) shell.push({ min: [r.min.x, r.min.y - t, r.min.z], max: [r.max.x, r.min.y, r.max.z] });
-    for (const raw of [...shell.map((b) => ({ ...b, type: data.room.type })), ...data.boxes]) {
+    // Walls slide in from outside, platforms rise from below: the chamber builds itself
+    // (only the picture moves; collisions are in place straight away).
+    const start = new V3(...data.start.pos);
+    const shellFrom = [[-4, 0, 0], [4, 0, 0], [0, 0, -4], [0, 0, 4], [0, 4, 0], null];
+    this.assembly = [];
+    const all = [...shell.map((b) => ({ ...b, type: data.room.type })), ...data.boxes];
+    all.forEach((raw, i) => {
       const s = { ...box3(raw), type: raw.type };
       s.mesh = this._box(s, FACES[s.type]);
       this.solids.push(s);
-    }
+      if (options.assemble === false) return;
+      let from;
+      let delay;
+      if (i < shell.length) {
+        from = shellFrom[i];
+        delay = 0.05 * i;
+      } else {
+        from = [0, -(s.max.y - s.min.y) - 0.5, 0];
+        const centre = new V3().addVectors(s.min, s.max).multiplyScalar(0.5);
+        delay = 0.35 + Math.min(1.2, centre.distanceTo(start) * 0.05);
+      }
+      if (from) this.assembly.push({ mesh: s.mesh, home: s.mesh.position.clone(), from: new V3(...from), delay });
+    });
+    this.assembleTime = 0;
+    this._applyAssembly();
 
-    ceilingLights(this.group, r);
+    ceilingLights(this.group, r, data.theme === "overgrown" ? { intensity: 45 } : {});
     this._observationWindow(r);
     if (options.chamberNumber) this._chamberSign(r, options.chamberNumber, options.chamberCount, data.name);
+    if (data.theme === "overgrown") this._overgrowth(r, data);
+    this._arrivalTube(start, options.arrivalTube !== false);
 
     for (const raw of data.goo) {
       const b = box3(raw);
@@ -392,5 +455,192 @@ export class World {
   update(t) {
     GOO.uniforms.uTime.value = t;
     FIZZLER.uniforms.uTime.value = t;
+  }
+
+  // ---------- animation: assembling walls, arrival tube, floating dust ----------
+
+  animate(dt) {
+    if (this.assembly && this.assembly.length) {
+      this.assembleTime += dt;
+      this._applyAssembly();
+    }
+    const tube = this.tube;
+    if (tube && tube.lowering) {
+      tube.group.position.y -= dt * 3.2;
+      if (tube.group.position.y < tube.floorY - tube.height - 0.2) {
+        tube.group.visible = false;
+        tube.lowering = false;
+      }
+    }
+    if (this.dust) {
+      const pos = this.dust.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        let y = pos.getY(i) + dt * 0.08 * (0.5 + ((i * 7) % 5) / 5);
+        if (y > this.dust.userData.top) y = this.dust.userData.bottom;
+        pos.setY(i, y);
+        pos.setX(i, pos.getX(i) + Math.sin(y * 3 + i) * dt * 0.03);
+      }
+      pos.needsUpdate = true;
+    }
+  }
+
+  /** True once every wall and platform has slid into place. */
+  get assembled() {
+    return !this.assembly || this.assembly.every((a) => this.assembleTime >= a.delay + ASSEMBLE_TIME);
+  }
+
+  _applyAssembly() {
+    for (const a of this.assembly) {
+      const k = THREE.MathUtils.clamp((this.assembleTime - a.delay) / ASSEMBLE_TIME, 0, 1);
+      const ease = 1 - (1 - k) ** 3;
+      a.mesh.position.copy(a.home).addScaledVector(a.from, 1 - ease);
+      a.mesh.visible = k > 0;
+    }
+  }
+
+  /** Lower the glass arrival tube into the floor (call when the player has arrived). */
+  openArrivalTube() {
+    if (this.tube) this.tube.lowering = true;
+  }
+
+  _arrivalTube(start, show) {
+    this.tube = null;
+    if (!show) return;
+    const floorY = start.y - 1.6;
+    const height = 3;
+    const group = new THREE.Group();
+    const glass = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.85, 0.85, height, 32, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0xcfeeff, transparent: true, opacity: 0.16, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false }),
+    );
+    glass.userData.ownMaterial = true;
+    glass.position.y = height / 2;
+    const ringMat = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.4, metalness: 0.7 });
+    for (const y of [0.03, height]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.86, 0.05, 8, 40), ringMat);
+      ring.userData.ownMaterial = true;
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = y;
+      group.add(ring);
+    }
+    group.add(glass);
+    group.position.set(start.x, floorY, start.z);
+    this.group.add(group);
+    this.tube = { group, floorY, height, lowering: false };
+  }
+
+  // ---------- the overgrown theme: an old, broken wing taken over by plants ----------
+
+  _overgrowth(r, data) {
+    const rand = seeded(data.id.length * 97 + 13);
+    const range = (lo, hi) => lo + rand() * (hi - lo);
+    const vineMat = new THREE.MeshStandardMaterial({ color: 0x3f6b2a, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({
+      map: LEAF_TEX, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.8, color: 0xb9d99a,
+    });
+    const mossMat = new THREE.MeshStandardMaterial({ map: MOSS_TEX, transparent: true, depthWrite: false, roughness: 1 });
+    for (const m of [vineMat, leafMat, mossMat]) m.userData.own = true;
+
+    // Hanging vines, each a wobbly tube from the ceiling, with leaves along it.
+    const leafGeo = new THREE.PlaneGeometry(0.28, 0.28);
+    const leaves = new THREE.InstancedMesh(leafGeo, leafMat, 420);
+    leaves.userData.ownMaterial = true;
+    let n = 0;
+    const dummy = new THREE.Object3D();
+    const addLeaf = (p) => {
+      if (n >= leaves.count) return;
+      dummy.position.copy(p);
+      dummy.rotation.set(range(0, Math.PI), range(0, Math.PI * 2), range(0, Math.PI));
+      dummy.scale.setScalar(range(0.6, 1.4));
+      dummy.updateMatrix();
+      leaves.setMatrixAt(n++, dummy.matrix);
+    };
+    for (let v = 0; v < 16; v++) {
+      const x = range(r.min.x + 0.5, r.max.x - 0.5);
+      const z = range(r.min.z + 0.5, r.max.z - 0.5);
+      const len = range(1.5, Math.min(5, r.max.y - r.min.y - 2.5));
+      const pts = [];
+      for (let k = 0; k <= 6; k++) {
+        pts.push(new V3(x + Math.sin(k * 1.3 + v) * 0.25, r.max.y - (len * k) / 6, z + Math.cos(k * 1.7 + v) * 0.25));
+      }
+      const vine = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, range(0.025, 0.05), 6), vineMat);
+      vine.userData.ownMaterial = true;
+      vine.castShadow = true;
+      this.group.add(vine);
+      for (let k = 0; k < 14; k++) addLeaf(pts[Math.floor(rand() * pts.length)].clone().add(new V3(range(-0.25, 0.25), range(-0.2, 0.2), range(-0.25, 0.25))));
+    }
+    // Plants creeping up from the corners and along the floor edges.
+    for (let k = 0; k < 160; k++) {
+      const side = Math.floor(rand() * 4);
+      const along = rand();
+      const x = side < 2 ? (side === 0 ? r.min.x + 0.2 : r.max.x - 0.2) : THREE.MathUtils.lerp(r.min.x, r.max.x, along);
+      const z = side >= 2 ? (side === 2 ? r.min.z + 0.2 : r.max.z - 0.2) : THREE.MathUtils.lerp(r.min.z, r.max.z, along);
+      addLeaf(new V3(x, r.min.y + range(0.05, 1.6) * rand(), z));
+    }
+    leaves.count = n;
+    leaves.castShadow = true;
+    this.group.add(leaves);
+
+    // Moss patches on the floor.
+    for (let k = 0; k < 12; k++) {
+      const s = range(1.2, 3.2);
+      const moss = new THREE.Mesh(new THREE.PlaneGeometry(s, s), mossMat);
+      moss.userData.ownMaterial = true;
+      moss.rotation.set(-Math.PI / 2, 0, range(0, Math.PI * 2));
+      moss.position.set(range(r.min.x + 1, r.max.x - 1), r.min.y + 0.012 + k * 0.0005, range(r.min.z + 1, r.max.z - 1));
+      moss.receiveShadow = true;
+      this.group.add(moss);
+    }
+
+    // Fallen wall panels leaning on the walls (just scenery, you can walk through them).
+    for (let k = 0; k < 5; k++) {
+      const panel = new THREE.Mesh(tiledBox(new V3(1.8, 1.8, 0.08)), FACES.white);
+      const left = rand() < 0.5;
+      panel.position.set(left ? r.min.x + 0.45 : r.max.x - 0.45, r.min.y + 0.8, range(r.min.z + 2, r.max.z - 2));
+      panel.rotation.set(range(-0.15, 0.15), Math.PI / 2, (left ? 1 : -1) * range(0.25, 0.5));
+      panel.castShadow = panel.receiveShadow = true;
+      this.group.add(panel);
+    }
+
+    // A hole in the ceiling: warm sunlight pours in, with a visible beam and floating dust.
+    const hx = THREE.MathUtils.lerp(r.min.x, r.max.x, 0.6);
+    const hz = THREE.MathUtils.lerp(r.min.z, r.max.z, 0.55);
+    const sky = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.4, 1.6),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff1d0).multiplyScalar(3) }),
+    );
+    sky.userData.ownMaterial = true;
+    sky.rotation.x = Math.PI / 2;
+    sky.position.set(hx, r.max.y - 0.01, hz);
+    const sun = new THREE.SpotLight(0xffe2b0, 160, 0, 0.42, 0.5, 2);
+    sun.position.set(hx, r.max.y + 0.5, hz);
+    sun.target.position.set(hx - 1, r.min.y, hz + 1);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.bias = -0.0004;
+    const beamH = r.max.y - r.min.y;
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 2.2, beamH, 24, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xffe9c0, transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
+    );
+    beam.userData.ownMaterial = true;
+    beam.position.set(hx - 0.5, r.min.y + beamH / 2, hz + 0.5);
+    beam.rotation.set(0.08, 0, 0.08);
+    this.group.add(sky, sun, sun.target, beam);
+
+    const count = 260;
+    const dust = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      dust[i * 3] = hx + range(-1.8, 1.8);
+      dust[i * 3 + 1] = range(r.min.y, r.max.y);
+      dust[i * 3 + 2] = hz + range(-1.8, 1.8);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(dust, 3));
+    this.dust = new THREE.Points(geo, new THREE.PointsMaterial({
+      color: new THREE.Color(0xfff0d0).multiplyScalar(1.5), size: 0.03, transparent: true, opacity: 0.8, depthWrite: false,
+    }));
+    this.dust.userData = { ownMaterial: true, top: r.max.y, bottom: r.min.y };
+    this.group.add(this.dust);
   }
 }
