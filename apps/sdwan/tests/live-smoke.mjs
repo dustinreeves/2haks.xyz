@@ -8,6 +8,7 @@ let fail = 0; const ok = (c, m) => { console.log(c ? '  ok  ' : '  FAIL', m); if
 await page.goto(URL); await page.locator('#engine.ok').waitFor({ timeout: 120000 }); ok(true, 'engine ready: ' + await page.textContent('#engine'));
 for (const [label, dir, n] of [['Dual-region, multi-VRF', 'multi_vrf', 6], ['Dual-region, certificates', 'deployment_guide', 6], ['Dual-region, mixed RR + dynamic BGP', 'mixed', 7]]) {
   await page.click('#nav-files'); page.once('dialog', d => d.accept()); await page.click(`button:has-text("${label}")`);
+  await page.locator('#nav-regions.on').waitFor(); // loadExample navigates here when the import is complete
   await page.locator('#engine[data-fresh="1"]').filter({ hasText: new RegExp('^' + n + ' configs') }).waitFor({ timeout: 60000 });
   await page.click('#nav-configs'); await page.waitForSelector('.cli .ln');
   const names = await page.$$eval('.ditem .dn', e => e.map(x => x.textContent)); let same = 0;
