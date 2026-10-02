@@ -1,0 +1,178 @@
+{# 11-Edge-SDWAN.j2                                                           #}
+{# Release: 7.4                                                               #}
+{# Design flavor: Dynamic BGP on Loopback (unified, ADVPN 2.0 ready)          #}
+{# -------------------------------------------------------------------------- #}
+{# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
+{# -------------------------------------------------------------------------- #}
+
+{% import 'Project' as project with context %}
+
+{# Options: project-wide defaults #}
+{% set options = {
+    'advpn2': project.advpn2|default(true),
+    'dynamic_bgp': project.dynamic_bgp|default(false),
+    'sdwan_mode': 'sla'
+  }
+%}
+{# Options can be selectively overriden in profile #}
+{% set _ = options.update(
+      project.profiles[profile].options|default({})
+   ) 
+%}
+
+{% set hub_sla_members = [ ] %}
+{% set hub_rule_members = [ ] %}
+{% set dia_members = [ ] %}
+config firewall address
+  edit "CORP_LAN"
+    set subnet {{ project.lan_summary|default('10.0.0.0/8') }}
+  next
+end
+config system sdwan
+  set status enable
+  config zone
+    edit "underlay"
+    next
+    edit "overlay"
+      set advpn-select {{ 'enable' if options.advpn2 else 'disable' }}
+    next
+  end
+  config members
+  {% set ns = namespace(mbr_i = 1) %}
+  {% for i in project.profiles[profile].interfaces 
+        if i.role == 'wan' and 
+        i.name is defined and 
+        i.dia|default(false) %}
+    edit {{ ns.mbr_i }}
+      set interface "{{ i.name }}"
+      set zone "underlay"
+      {% if i.src_ip is defined %}
+      set source {{ i.src_ip|ipaddr('address') }}
+      {% else %}
+      unset source
+      {% endif %}
+      set cost {{ 10 if i.backup|default(false) else 0 }}
+      # Best priority, used for Internet access in implicit rule / local-out
+      set priority 1
+      # Gateway is fetched from DHCP
+    next
+    {{ dia_members.append(ns.mbr_i) or "" }}
+    {% set ns.mbr_i = ns.mbr_i + 1 %}
+  {% endfor %}
+  {% for h in project.regions[region].hubs %}
+  {% set hubloop = loop %}
+  {% set this_hub_members = [] %}
+  {% set ol_tunnels = [] %}
+  {% for i in project.profiles[profile].interfaces 
+        if i.role == 'wan' and 
+        i.name is defined and
+        i.ol_type in project.hubs[h].overlays %}
+    {# Track generated tunnels, to handle duplicates by adding extra index as a suffix #}
+    {% set ul_name = i.ul_name~"-" if i.ul_name is defined else "" %}
+    {# If no explicit Hub name is defined, then "H<hub_number>" is used #}
+    {% set hub_name = project.hubs[h].hub_name|upper if project.hubs[h].hub_name is defined else "H"~hubloop.index %}
+    {% set ol_tun = ul_name~hub_name~"_"~i.ol_type %}
+    {% set count = ol_tunnels|select("equalto", ol_tun)|list|count %}
+    {# Tunnel name = '<hub_name>_<ol_type>' if no duplicates, otherwise '<hub_name>_<ol_type>_<index>' #}
+    {% set ol_tun_name = ol_tun if not count else ol_tun~'_'~(count+1) %}
+    {{ ol_tunnels.append(ol_tun) or "" }}
+    edit {{ ns.mbr_i }}
+      set interface "{{ ol_tun_name }}"
+      set priority 10
+      set source {{ loopback|ipaddr('address') }}
+      set cost {{ 10 if i.backup|default(false) else 0 }}
+      set zone "overlay"
+      {% if options.advpn2 %}
+      set transport-group {{ i.transport_group|default(0) }}
+      {% endif %}
+    next
+    {{ hub_sla_members.append(ns.mbr_i) or "" }}
+    {{ this_hub_members.append(ns.mbr_i) or "" }}
+    {% set ns.mbr_i = ns.mbr_i + 1 %}
+  {% endfor %}
+  {{ hub_rule_members.append(this_hub_members) or "" }}
+  {% endfor %}
+  end
+  config health-check
+    edit "HUB"
+      set server {{ project.hub_hc_server|default('10.200.99.1') }}
+      set sla-fail-log-period 10
+      set sla-pass-log-period 10
+      set embed-measured-health enable
+      set members {{ hub_sla_members|join(' ') }}
+      config sla
+        edit 1
+          set link-cost-factor latency
+          set latency-threshold 100
+        next
+      end
+    next
+    {% if dia_members %}
+    edit "Internet"
+      set server "www.fortinet.com"
+      set sla-fail-log-period 10
+      set sla-pass-log-period 10
+      set update-cascade-interface disable
+      set update-static-route disable
+      set members {{ dia_members|join(' ') }}
+    next
+    {% else %}
+    delete "Internet"
+    {% endif %}
+  end
+  config neighbor
+  {% for h in project.regions[region].hubs %}
+    edit {{ project.hubs[h].lo_bgp }}
+      set member {{ hub_rule_members[loop.index0]|join(' ') }}
+      set health-check "HUB"
+      set sla-id 1
+      set minimum-sla-meet-members 1
+    next
+  {% endfor %}
+  end
+  config service
+    edit 1
+      set name "Corporate"
+      set mode {{ options.sdwan_mode }}
+      set dst "CORP_LAN"
+      set src "CORP_LAN"
+      set tie-break fib-best-match
+      {% if options.sdwan_mode == 'sla'  %}
+      config sla
+        edit "HUB"
+          set id 1
+        next
+      end
+      {% elif options.sdwan_mode == 'priority' %}
+      set health-check "HUB"
+      {% endif %}
+      set priority-members {{ hub_sla_members|join(' ') }}
+    next
+  {% if dia_members %}
+    edit 10
+      set name "Local-Breakout"
+      set mode priority
+      set dst "all"
+      set health-check Internet
+      # Using best underlay (DIA) link
+      set priority-members {{ dia_members|join(' ') }}
+    next
+  {% else %}
+    delete 10
+  {% endif %}
+  end
+  {% if options.advpn2 %}
+  config zone
+    edit "overlay"
+      set advpn-health-check "HUB"
+    next
+  end  
+  {% endif %}
+end
+
+config router static
+  edit 100
+    # Default route
+    set sdwan-zone "underlay" "overlay"
+  next
+end

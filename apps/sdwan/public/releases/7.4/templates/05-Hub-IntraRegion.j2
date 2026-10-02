@@ -1,0 +1,119 @@
+{# 05-Hub-IntraRegion.j2                                                      #}
+{# Release: 7.4                                                               #}
+{# Design flavor: Dynamic BGP on Loopback (unified, ADVPN 2.0 ready)          #}
+{# -------------------------------------------------------------------------- #}
+{# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
+{# -------------------------------------------------------------------------- #}
+
+{% import 'Project' as project with context %}
+
+{% set multi_vrf = true if project.regions[region].vrfs|default([]) else false %}
+{% set pe_vrf = project.pe_vrf|default(1) if multi_vrf else 0 %}
+
+{# Hub2Hub tunnels within the region (for DC-to-DC traffic) #}
+{% set my_index = project.regions[region].hubs.index(hostname) + 1 %}
+{% if project.intrareg_hub2hub|default(false) %}
+
+{# Build Hub-to-Hub tunnels #}
+
+{% for h in project.regions[region].hubs if h != hostname %}
+  {% set peer_index = project.regions[region].hubs.index(h) + 1 %}
+  {% for i in project.profiles[profile].interfaces 
+       if i.role in [ 'wan', 'backbone' ] and 
+       i.name is defined and 
+       i.ol_type in project.hubs[hostname].overlays and
+       i.ol_type in project.hubs[h].overlays and
+       project.hubs[hostname].overlays[i.ol_type].hub2hub|default(true) and
+       project.hubs[h].overlays[i.ol_type].hub2hub|default(true) %}
+  config vpn ipsec phase1-interface
+    edit "H{{ my_index }}H{{ peer_index }}_{{ i.ol_type }}"
+      set interface "{{ i.name }}"
+      set ike-version 2
+      {% if project.cert_auth|default(true) %}
+      set authmethod signature
+      set certificate "{{ project.hub_cert_template|default('Hub') }}"
+      set peertype {{ 'peer' if project.cert_auth_filter|default(false) else 'any' }}
+        {% if project.cert_auth_filter|default(false) %}
+        set peer {{ project.hub_cert_filter_hub2hub|default('TheCA') }}
+        {% endif %}    
+      {% else %}
+      set authmethod psk
+      set peertype any
+      set psksecret {{ project.psk|default('S3cr3t!') }}
+      {% endif %}
+      set keylife 28800
+      set exchange-fgt-device-id enable
+      set proposal aes256gcm-prfsha256
+      set exchange-interface-ip enable
+      set encapsulation {{ 'vpn-id-ipip' if multi_vrf else 'none' }}
+      set remote-gw {{ project.hubs[h].overlays[i.ol_type].wan_ip }}
+      set exchange-ip-addr4 {{ loopback|ipaddr('address') }}
+      set network-overlay disable
+      set dpd-retrycount 3
+      set dpd-retryinterval 5
+      set dpd on-idle
+    next
+  end
+  config vpn ipsec phase2-interface
+    edit "H{{ my_index }}H{{ peer_index }}_{{ i.ol_type }}"
+      set phase1name "H{{ my_index }}H{{ peer_index }}_{{ i.ol_type }}"
+      set proposal aes256gcm
+      set keepalive enable
+      set keylifeseconds 3600    
+    next
+  end
+  config system interface
+    edit "H{{ my_index }}H{{ peer_index }}_{{ i.ol_type }}"
+      set vrf {{ pe_vrf }} 
+    next
+  end  
+  {% if project.create_hub2hub_zone|default(true) %}
+  config system zone
+    edit "{{project.hub2hub_zone|default('hub2hub_overlay')}}"
+      append interface "H{{ my_index }}H{{ peer_index }}_{{ i.ol_type }}"
+    next
+  end
+  {% endif %}
+  {% endfor %}
+{% endfor %}
+
+{# Build Hub-to-Hub BGP peering #}
+
+config router route-map
+  edit "LOCAL_HUB2HUB_OUT"
+    config rule
+      edit 1
+        {# Advertise Hub's LAN prefixes only #}
+        set match-tag 100
+        set set-community no-advertise
+        set set-community-additive enable
+      next
+    end
+  next
+end
+config router bgp
+  config neighbor
+  {% for h in project.regions[region].hubs if h != hostname %}
+  edit {{ project.hubs[h].lo_bgp }}
+    set soft-reconfiguration enable
+    set capability-graceful-restart enable
+    set advertisement-interval 1
+    set interface "Lo"
+    set update-source "Lo"
+    set connect-timer 1
+    set remote-as {{ project.regions[region].as }}
+    unset route-map-out{{'-vpnv4' if not multi_vrf}}
+    set route-map-out{{'-vpnv4' if multi_vrf}} "LOCAL_HUB2HUB_OUT"
+    {% if multi_vrf %}
+    set soft-reconfiguration-vpnv4 enable
+    set capability-graceful-restart-vpnv4 enable
+    {% else %}
+    unset soft-reconfiguration-vpnv4
+    unset capability-graceful-restart-vpnv4
+    {% endif %}
+  next
+  {% endfor %}
+  end
+end
+
+{% endif %}

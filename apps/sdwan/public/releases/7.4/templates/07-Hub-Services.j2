@@ -1,0 +1,36 @@
+{# 07-Hub-Services.j2                                                         #}
+{# Release: 7.4                                                               #}
+{# Design flavor: Dynamic BGP on Loopback (unified, ADVPN 2.0 ready)          #}
+{# -------------------------------------------------------------------------- #}
+{# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
+{# -------------------------------------------------------------------------- #}
+
+{% import 'Project' as project with context %}
+
+{# Options: project-wide defaults #}
+{% set options = {
+    'vdom': project.vdom|default('root'),   
+    'force_cleanup': project.force_cleanup|default(false)
+  }
+%}
+{# Options can be selectively overriden in profile #}
+{% set _ = options.update(
+      project.profiles[profile].options|default({})
+   ) 
+%}
+
+{# CRL check #}
+{% if project.hub_crl_check|default(false) %}
+config vpn certificate crl
+   edit TheCA
+      {{'un' if not project.crl_scep_url|default()}}set scep-url {{ project.crl_scep_url|default() }}
+      {{'un' if not project.crl_http_url|default()}}set http-url {{ project.crl_http_url|default() }}
+      set update-vdom {{ options.vdom }}
+      set update-interval 300
+   next
+end
+{% elif options.force_cleanup %}
+config vpn certificate crl
+   delete TheCA
+end
+{% endif %}

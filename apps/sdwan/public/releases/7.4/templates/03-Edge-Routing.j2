@@ -1,0 +1,206 @@
+{# 03-Edge-Routing.j2                                                         #}
+{# Release: 7.4                                                               #}
+{# Design flavor: Dynamic BGP on Loopback (unified, ADVPN 2.0 ready)          #}
+{# -------------------------------------------------------------------------- #}
+{# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
+{# -------------------------------------------------------------------------- #}
+
+{% import 'Project' as project with context %}
+
+{% set multi_vrf = true if project.regions[region].vrfs|default([]) else false %}
+{% set pe_vrf = project.pe_vrf|default(1) if multi_vrf else 0 %}
+{% set vrf_rt_as = project.vrf_rt_as|default('65000') %}
+
+{# Options: project-wide defaults #}
+{% set options = {
+    'advpn2': project.advpn2|default(true),
+    'dynamic_bgp': project.dynamic_bgp|default(false),
+    'strict_peering': project.strict_peering|default(true)
+  }
+%}
+{# Options can be selectively overriden in profile #}
+{% set _ = options.update(
+      project.profiles[profile].options|default({})
+   ) 
+%}
+
+{# For regions with 4-byte ASN, use a dummy 2-byte ASN for BGP communities (4-byte ASN is not supported in communities) #}
+{% set community_as = project.regions[region].as 
+                      if project.regions[region].as|int < 65536 
+                      else project.short_community_as|default('65000') %}
+
+config router aspath-list
+  edit "SDWAN_AS"
+    config rule
+      purge
+      {% if project.regex_as is defined %}
+      edit 1
+        set action permit
+        set regexp "{{ project.regex_as }}"
+      next
+      {% else %}
+      {# List ASNs of all defined regions #}
+      {% for r in project.regions %}
+      edit {{ loop.index }}
+        set action permit
+        set regexp "{{ project.regions[r].as }}"
+      next
+      {% endfor %}
+      {% endif %}
+    end
+  next
+end
+
+config router route-map
+  {% for i in range(1,3) %}
+  edit "H{{loop.index}}_TAG"
+    config rule
+      edit 1
+        set set-tag {{ loop.index }}
+      next
+    end
+  next
+  {% endfor %}
+  edit "SLA_OK"
+    config rule
+      edit 1
+        set set-community "{{ community_as }}:99"
+      next
+    end
+  next
+  edit "LAN_TAG"
+    config rule
+      edit 1
+        set set-tag 100
+      next
+    end
+  next
+  edit "LAN_OUT"
+    config rule
+      edit 1
+        set match-tag 100
+      next
+    end  
+  next
+end
+
+config router bgp
+  set as {{ project.regions[region].as }}
+  set router-id {{ loopback|ipaddr('address') }}
+  set keepalive-timer 15
+  set holdtime-timer 45
+  set ibgp-multipath enable
+  set recursive-next-hop enable
+  set tag-resolve-mode {{ 'merge' if not options.advpn2 else 'disable' }}
+  set graceful-restart enable
+  config neighbor
+    {{ 'purge' if options.strict_peering or "" }}
+    {% for h in project.regions[region].hubs %}
+    edit {{ project.hubs[h].lo_bgp }}
+      set soft-reconfiguration enable
+      set capability-graceful-restart enable
+      set advertisement-interval 1
+      set interface "Lo"
+      set update-source "Lo"
+      set connect-timer 1
+      set remote-as {{ project.regions[region].as }}
+      {% if not options.advpn2 %}
+      set route-map-in "H{{loop.index}}_TAG"
+      {% else %}
+      unset route-map-in
+      {% endif %}
+      unset route-map-out{{'-vpnv4' if not multi_vrf}}-preferable
+      set route-map-out{{'-vpnv4' if multi_vrf}}-preferable "SLA_OK" 
+      {% if multi_vrf %}
+      set soft-reconfiguration-vpnv4 enable
+      set capability-graceful-restart-vpnv4 enable
+        {% if not options.advpn2 %}
+        set route-map-in-vpnv4 "H{{loop.index}}_TAG"
+        {% else %}
+        unset route-map-in-vpnv4
+        {% endif %}
+      {% else %}
+      unset soft-reconfiguration-vpnv4
+      unset capability-graceful-restart-vpnv4
+      unset route-map-in-vpnv4
+      {% endif %}
+    next
+    {% endfor %}
+  end
+
+  {% if options.strict_peering %}
+  config neighbor-range
+    purge
+  end
+  config neighbor-group
+    purge
+  end
+  {% endif %}
+  {% if options.dynamic_bgp %}
+  config neighbor-group
+    edit "DYN_EDGE"
+      set ebgp-enforce-multihop enable 
+      set soft-reconfiguration enable
+      set capability-graceful-restart enable
+      set advertisement-interval 1
+      set next-hop-self enable
+      set remote-as-filter "SDWAN_AS"
+      set interface "Lo"
+      set update-source "Lo"
+      set passive disable
+      unset route-map-out{{'-vpnv4' if not multi_vrf}}
+      set route-map-out{{'-vpnv4' if multi_vrf}} "LAN_OUT"
+      {% if multi_vrf %}
+      set soft-reconfiguration-vpnv4 enable
+      set capability-graceful-restart-vpnv4 enable      
+      {% else %}
+      unset soft-reconfiguration-vpnv4
+      unset capability-graceful-restart-vpnv4
+      {% endif %}
+    next
+  end
+  config neighbor-range
+    edit 101
+      set prefix {{ project.lo_summary }}
+      set neighbor-group "DYN_EDGE"
+    next
+  end  
+  {% endif %}
+
+  config network
+    {{ 'purge' if options.strict_peering or "" }}
+    {% set network_advertised = [] %}
+    {% for i in project.profiles[profile].interfaces if i.role == 'lan' %}
+    {% if i.name is defined and 
+          i.ip|default()|ipaddr and
+          i.advertise|default(true) and
+          not i.ip|ipaddr(0) in network_advertised %}
+    edit {{ 110 + loop.index }}
+      set prefix {{ i.ip|ipaddr(0) }}
+      set route-map "LAN_TAG"
+    next
+    {{ network_advertised.append(i.ip|ipaddr(0)) or "" }}
+    {% endif %}
+    {% endfor %}
+  end
+  
+  {% if multi_vrf %}
+  config vrf
+    edit "{{ pe_vrf }}"
+      set role pe
+    next
+    {% for i in project.profiles[profile].interfaces if i.vrf is defined and i.name is defined %}
+    edit "{{ i.vrf }}"
+      set role "ce"
+      set rd "{{ loopback|ipaddr('address') }}:{{ i.vrf }}"
+      set import-rt "{{ vrf_rt_as }}:{{ i.vrf }}"
+      set export-rt "{{ vrf_rt_as }}:{{ i.vrf }}"
+    next
+    {% endfor %}
+  end  
+  {% else %}
+  config vrf
+    purge
+  end
+  {% endif %}
+end

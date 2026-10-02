@@ -1,0 +1,70 @@
+{# 02-Hub-Overlay.j2                                                          #}
+{# Release: 7.4                                                               #}
+{# Design flavor: Dynamic BGP on Loopback (unified, ADVPN 2.0 ready)          #}
+{# -------------------------------------------------------------------------- #}
+{# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
+{# -------------------------------------------------------------------------- #}
+
+{% import 'Project' as project with context %}
+
+{% set multi_vrf = true if project.regions[region].vrfs|default([]) else false %}
+{% set pe_vrf = project.pe_vrf|default(1) if multi_vrf else 0 %}
+
+{% for i in project.profiles[profile].interfaces 
+      if i.role == 'wan' and 
+      i.name is defined and
+      i.ol_type in project.hubs[hostname].overlays %}
+config vpn ipsec phase1-interface
+  edit "EDGE_{{ i.ol_type }}"
+    set type dynamic
+    set interface "{{ i.name }}"
+    set ike-version 2
+    {% if project.cert_auth|default(true) %}
+    set authmethod signature
+    set certificate "{{ project.hub_cert_template|default('Hub') }}"
+    set peertype {{ 'peer' if project.cert_auth_filter|default(false) else 'any' }}
+      {% if project.cert_auth_filter|default(false) %}
+      set peer {{ project.hub_cert_filter|default('TheCA') }}
+      {% endif %}    
+    {% else %}
+    set authmethod psk
+    set peertype any
+    set psksecret {{ project.psk|default('S3cr3t!') }}
+    {% endif %}
+    set localid {{ i.ol_type~'-'~hostname }}
+    set exchange-fgt-device-id enable
+    set proposal aes256gcm-prfsha256 aes256-sha256
+    {% if project.intrareg_advpn|default(true) %}
+    set auto-discovery-sender enable
+    {% else %}
+    set auto-discovery-sender disable
+    set exchange-interface-ip enable
+    {% endif %}    
+    set add-route disable
+    set encapsulation {{ 'vpn-id-ipip' if multi_vrf else 'none' }}
+    set exchange-ip-addr4 {{ loopback|ipaddr('address') }}
+    set network-overlay enable
+    set network-id {{ project.hubs[hostname].overlays[i.ol_type].network_id }}
+    set dpd-retrycount 2
+    set dpd-retryinterval 5
+    set dpd on-idle
+    {% if i.src_ip is defined %}
+    set local-gw {{ i.src_ip|ipaddr('address') }}
+    {% else %}
+    unset local-gw
+    {% endif %}    
+  next
+end
+config vpn ipsec phase2-interface
+  edit "EDGE_{{ i.ol_type }}"
+    set phase1name "EDGE_{{ i.ol_type }}"
+    set proposal aes256gcm
+    set keepalive enable
+  next
+end
+config system interface
+  edit "EDGE_{{ i.ol_type }}"
+    set vrf {{ pe_vrf }}
+  next
+end
+{% endfor %}

@@ -1,0 +1,238 @@
+{# 03-Hub-Routing.j2                                                          #}
+{# Release: 7.4                                                               #}
+{# Design flavor: Dynamic BGP on Loopback (unified, ADVPN 2.0 ready)          #}
+{# -------------------------------------------------------------------------- #}
+{# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
+{# -------------------------------------------------------------------------- #}
+
+{% import 'Project' as project with context %}
+
+{% set multi_vrf = true if project.regions[region].vrfs|default([]) else false %}
+{% set pe_vrf = project.pe_vrf|default(1) if multi_vrf else 0 %}
+{% set vrf_rt_as = project.vrf_rt_as|default('65000') %}
+
+{# If BGP peering is not customized, use the project-wide defaults #}
+{% set peering = project.hubs[hostname].peering|default(
+        {
+          'EDGE': {
+            'dynamic_bgp': project.dynamic_bgp|default(false),
+            'lo_summary': project.regions[region].lo_summary|default(project.lo_summary)
+          }
+        }
+    )
+%}
+
+{# Options: project-wide defaults #}
+{% set options = {
+    'strict_peering': project.strict_peering|default(true),
+    'strict_pbr': project.strict_pbr|default(true),
+    'force_cleanup': project.force_cleanup|default(false)
+  }
+%}
+{# Options can be selectively overriden in profile #}
+{% set _ = options.update(
+      project.profiles[profile].options|default({})
+   ) 
+%}
+
+{# For regions with 4-byte ASN, use a dummy 2-byte ASN for BGP communities (4-byte ASN is not supported in communities) #}
+{% set community_as = project.regions[region].as 
+                      if project.regions[region].as|int < 65536 
+                      else project.short_community_as|default('65000') %}
+
+config router community-list
+  edit "SLA_OK"
+    config rule
+      edit 1
+        set action permit
+        set match "{{ community_as }}:99"
+      next
+    end
+  next
+end
+config router route-map
+  edit "LOCAL_REGION"
+    config rule
+      edit 1
+        {# Do not advertise to EBGP peers (outside the region #}
+        set set-community "no-export"
+        set set-tag 100
+      next
+    end
+  next
+  edit "LAN_TAG"
+    config rule
+      edit 1
+        set set-tag 100
+      next
+    end
+  next 
+  edit "EDGE_OUT"
+    config rule
+      edit 100
+      {# Placeholder for advertisement filtering towards Spokes for RR-less design (default: permit all) #}
+      next
+    end
+  next 
+end
+
+config router bgp
+  set as {{ project.regions[region].as }}
+  set router-id {{ loopback|ipaddr('address') }}
+  set keepalive-timer 15
+  set holdtime-timer 45
+  set ibgp-multipath enable
+  set ebgp-multipath enable
+  set recursive-next-hop enable
+  set recursive-inherit-priority enable
+  set graceful-restart enable
+  {% if options.strict_peering %}
+  config neighbor-range
+    purge
+  end
+  config neighbor-group
+    purge
+  end
+  config aggregate-address
+    purge
+  end
+    {% if options.force_cleanup %}
+    config neighbor
+      purge
+    end
+    {% endif %}
+  {% endif %}
+  {% for p in peering %}  
+  config neighbor-group
+    edit {{ p }}
+      set soft-reconfiguration enable
+      set capability-graceful-restart enable
+      set advertisement-interval 1
+      set next-hop-self enable
+      set remote-as {{ project.regions[region].as }}
+      set interface "Lo"
+      set update-source "Lo"
+      unset route-reflector-client{{'-vpnv4' if not multi_vrf}}
+      {% if not peering[p].dynamic_bgp and project.intrareg_advpn|default(true) %}
+      set route-reflector-client{{'-vpnv4' if multi_vrf}} enable
+      {% else %}
+      set route-reflector-client{{'-vpnv4' if multi_vrf}} disable
+      unset route-map-out{{'-vpnv4' if not multi_vrf}}
+      set route-map-out{{'-vpnv4' if multi_vrf}} "EDGE_OUT"          
+      {% endif %}
+      {% if multi_vrf %}
+      set soft-reconfiguration-vpnv4 enable
+      set capability-graceful-restart-vpnv4 enable      
+      {% else %}
+      unset soft-reconfiguration-vpnv4
+      unset capability-graceful-restart-vpnv4
+      {% endif %}
+    next
+  end
+  config neighbor-range
+    edit {{ 100 + loop.index }}
+      set prefix {{ peering[p].lo_summary }}
+      set neighbor-group "{{ p }}"
+    next
+  end
+  {% endfor %}
+
+  {# If lan_summary is defined, advertise it to Spokes #}
+  {# Preference: regional per-vrf lan_summary > regional lan_summary > global lan_summary #}
+  {% set network_aggregated = [] %}
+  {% if project.regions[region].vrfs is defined or 
+        project.regions[region].lan_summary is defined or 
+        project.lan_summary is defined %}
+  config aggregate-address
+    {% for v in project.regions[region].vrfs|default(
+                [{ 'lan_summary': project.regions[region].lan_summary|default(project.lan_summary) }]) %}
+    {% if v.lan_summary is defined and not v.lan_summary|ipaddr(0) in network_aggregated %}
+    edit {{ 110 + loop.index }}
+      set prefix {{ v.lan_summary|ipaddr(0) }}
+    next
+    {{ network_aggregated.append(v.lan_summary|ipaddr(0)) or "" }}
+    {% endif %}
+    {% endfor %}    
+  end
+  {% endif %}
+
+  config network
+    {{ ('purge' if options.strict_peering and options.force_cleanup) or "" }}
+    edit 102
+      set prefix {{ project.lo_summary }}
+      set route-map "LOCAL_REGION"
+    next  
+    {% set network_advertised = [] %}
+    {% for i in project.profiles[profile].interfaces if i.role == 'lan' %}
+    {% if i.name is defined and 
+          i.ip|default()|ipaddr and 
+          i.advertise|default(true) and
+          not i.ip|ipaddr(0) in network_advertised %}
+    edit {{ 110 + loop.index }}
+      set prefix {{ i.ip|ipaddr(0) }}
+      set route-map "LAN_TAG"
+    next
+    {{ network_advertised.append(i.ip|ipaddr(0)) or "" }}
+    {% endif %}
+    {% endfor %}
+  end
+
+  {% if multi_vrf %}
+  config vrf
+    edit "{{ pe_vrf }}"
+      set role pe
+    next
+    {% for v in project.regions[region].vrfs %}
+    edit "{{ v.id }}"
+      set role "ce"
+      set rd "{{ loopback|ipaddr('address') }}:{{ v.id }}"
+      set import-rt "{{ vrf_rt_as }}:{{ v.id }}"
+      set export-rt "{{ vrf_rt_as }}:{{ v.id }}"
+    next
+    {% endfor %}
+  end  
+  {% else %}
+  config vrf
+    purge
+  end
+  {% endif %}
+end
+
+{% if options.strict_pbr %}
+config router policy
+  purge
+end
+{% endif %}
+{% if project.overlay_stickiness|default(false) %}
+config router policy
+  {% for i in project.profiles[profile].interfaces 
+        if i.role == 'wan' and 
+        i.name is defined and 
+        i.ol_type in project.hubs[hostname].overlays %}
+  edit {{ loop.index }}
+    set input-device "EDGE_{{ i.ol_type }}"
+    set output-device "EDGE_{{ i.ol_type }}"
+    {{'un' if not project.lan_summary|default()}}set dst {{ project.lan_summary|default() }}
+  next
+  {% endfor %}
+end
+{% endif %}
+
+config router static
+  {% if project.lan_summary is defined %}
+  edit 101
+    set dst {{ project.lan_summary }}
+    set blackhole enable
+    set vrf {{ pe_vrf }}
+    set comment "Avoid potential leak of corporate traffic to underlay"
+  next
+  {% elif options.force_cleanup %}
+  delete 101
+  {% endif %}
+  edit 102
+    set dst {{ project.lo_summary }}
+    set blackhole enable
+    set vrf {{ pe_vrf }}
+    set comment "Avoid potential recursive resolution of corporate BGP routes via underlay"
+  next
+end

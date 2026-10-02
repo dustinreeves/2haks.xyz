@@ -159,6 +159,18 @@
         "api": [],
         "cli": []
       }
+    },
+    {
+      "slug": "sdwan",
+      "name": "SD-WAN ADVPN Designer",
+      "launch_date": "2026-10-02",
+      "url": "https://sdwan.2haks.xyz",
+      "description": "Design a Fortinet SD-WAN/ADVPN network in a web UI and watch the FortiGate config generate live. Runs entirely in your browser.",
+      "author": "Dustin",
+      "examples": {
+        "api": [],
+        "cli": []
+      }
     }
   ]
 }
