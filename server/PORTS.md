@@ -15,3 +15,5 @@ Take the next free number, add a row here, and append (never replace) your block
 | 8202 | quiz | api | quiz.2haks.xyz/api/* |
 | 8301 | portal | web (nginx) | portal.2haks.xyz |
 | 8302 | portal | api | portal.2haks.xyz/api/* |
+| 8401 | gundesigner | web (nginx) | gundesigner.2haks.xyz |
+| 8402 | gundesigner | api | gundesigner.2haks.xyz/api/* |

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gun Designer</title>
+  <meta name="description" content="Bolt silly parts onto a base gun, paint it, and spin it around in 3D. Part of 2haks.xyz.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a class="home" href="https://2haks.xyz">← 2haks</a>
+    <div>
+      <h1>Gun Designer</h1>
+      <p class="tagline">Pick a base gun, bolt on parts, paint it, then spin it around in 3D.</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section id="stage" class="stage" aria-label="3D view">
+      <h2 id="gun-name" class="gun-name">Loading…</h2>
+      <div id="viewer" class="viewer"></div>
+      <p class="hint">Drag to turn · scroll or pinch to zoom · space to test fire</p>
+      <div class="toolbar">
+        <button type="button" id="spin" class="tool" aria-pressed="true">↻ Spin</button>
+        <button type="button" id="explode" class="tool" aria-pressed="false">💥 Explode</button>
+        <button type="button" id="fire" class="tool">🔥 Test fire</button>
+        <button type="button" id="photo" class="tool">📷 Photo</button>
+      </div>
+      <h3 class="stats-title">Stats</h3>
+      <div id="stats" class="stats"></div>
+    </section>
+
+    <aside class="panel" aria-label="Parts">
+      <section>
+        <h3>Base gun</h3>
+        <div id="bases" class="chips"></div>
+        <p id="base-description" class="muted"></p>
+      </section>
+
+      <div id="slots"></div>
+
+      <section>
+        <h3>Paint</h3>
+        <div class="colors">
+          <label>Body <input type="color" id="body-color"></label>
+          <label>Accent <input type="color" id="accent-color"></label>
+        </div>
+        <div id="finishes" class="chips"></div>
+      </section>
+
+      <div class="actions">
+        <button type="button" id="random" class="button">🎲 Random</button>
+        <button type="button" id="reset" class="button ghost">Start over</button>
+        <button type="button" id="save" class="button primary">💾 Save &amp; share</button>
+      </div>
+
+      <div id="share" class="share" hidden>
+        <p>Saved! Share code <strong id="share-code"></strong></p>
+        <div class="share-row">
+          <input id="share-link" readonly aria-label="Share link">
+          <button type="button" id="copy" class="button">Copy</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="gallery-wrap">
+    <h2>Gallery</h2>
+    <p class="muted">The newest guns people saved. Click one to load it.</p>
+    <div id="gallery" class="gallery"><p class="muted">Loading…</p></div>
+  </section>
+
+  <footer>
+    Made by Dustin on <a href="https://2haks.xyz">2haks.xyz</a> ·
+    <a href="/api/docs">API</a> ·
+    <a href="https://github.com/dustinreeves/2haks.xyz/tree/main/apps/gundesigner">Code</a>
+  </footer>
+
+  <div id="toast" class="toast" hidden role="status"></div>
+</body>
+</html>

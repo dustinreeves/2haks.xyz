@@ -1,0 +1,446 @@
+{
+  "_help": "Every base gun and part, as simple shapes. Units are about 1 cm. +x points out of the muzzle, +y is up, +z is towards the viewer. Shape keys: t = type (box, cyl, sph, tor), p = position, r = rotation in degrees, m = material (body, accent, metal, dark, glass, glow, plastic), c = colour override. box: s = size. cyl: r1 = radius at the start, r2 = radius at the end (optional), l = length, ax = axis. sph: rad = radius, sc = scale. tor: rad = ring radius, tube = thickness, ax = axis the ring faces. anim: wobble or spin. nofit: leave out of the camera framing. Run `gundesigner validate` after editing.",
+  "slots": [
+    {"id": "barrel", "name": "Barrel"},
+    {"id": "muzzle", "name": "Muzzle"},
+    {"id": "grip", "name": "Grip"},
+    {"id": "stock", "name": "Stock"},
+    {"id": "optic", "name": "Sight"},
+    {"id": "magazine", "name": "Magazine"},
+    {"id": "underbarrel", "name": "Underbarrel"}
+  ],
+  "stats": [
+    {"id": "damage", "name": "Damage"},
+    {"id": "accuracy", "name": "Accuracy"},
+    {"id": "range", "name": "Range"},
+    {"id": "handling", "name": "Handling"},
+    {"id": "fire_rate", "name": "Fire rate"},
+    {"id": "goofiness", "name": "Goofiness"}
+  ],
+  "finishes": [
+    {"id": "matte", "name": "Matte", "adj": "Stealthy",
+     "metal": {"color": "#3a3d42", "metalness": 0.6, "roughness": 0.55},
+     "body": {"metalness": 0.1, "roughness": 0.7}},
+    {"id": "polished", "name": "Polished", "adj": "Shiny",
+     "metal": {"color": "#a3aab2", "metalness": 1, "roughness": 0.25},
+     "body": {"metalness": 0.25, "roughness": 0.3}},
+    {"id": "chrome", "name": "Chrome", "adj": "Mirror-Finish",
+     "metal": {"color": "#eef2f6", "metalness": 1, "roughness": 0.05},
+     "body": {"metalness": 0.9, "roughness": 0.1}},
+    {"id": "gold", "name": "Gold", "adj": "Golden", "stats": {"goofiness": 5},
+     "metal": {"color": "#e8b64a", "metalness": 1, "roughness": 0.2},
+     "body": {"metalness": 0.7, "roughness": 0.25}},
+    {"id": "toy", "name": "Toy plastic", "adj": "Toy", "stats": {"goofiness": 10},
+     "metal": {"color": "#f2f2f2", "metalness": 0, "roughness": 0.45},
+     "body": {"metalness": 0, "roughness": 0.45}}
+  ],
+  "bases": [
+    {
+      "id": "sidekick", "name": "Sidekick", "class": "pistol",
+      "description": "A trusty little pistol. Small, quick, and surprisingly polite.",
+      "stats": {"damage": 35, "accuracy": 55, "range": 30, "handling": 85, "fire_rate": 50, "goofiness": 5},
+      "mounts": {"barrel": [18, 1.4, 0], "grip": [3, -2.2, 0], "magazine": [1.5, -9.4, 0], "optic": [9, 3, 0], "stock": [0, 0.5, 0], "underbarrel": [13, -2.2, 0]},
+      "shapes": [
+        {"t": "box", "s": [18, 3, 2.6], "p": [9, 1.5, 0], "m": "body"},
+        {"t": "box", "s": [0.3, 2.2, 2.7], "p": [1, 1.6, 0], "m": "dark"},
+        {"t": "box", "s": [0.3, 2.2, 2.7], "p": [1.8, 1.6, 0], "m": "dark"},
+        {"t": "box", "s": [0.3, 2.2, 2.7], "p": [2.6, 1.6, 0], "m": "dark"},
+        {"t": "box", "s": [0.3, 2.2, 2.7], "p": [3.4, 1.6, 0], "m": "dark"},
+        {"t": "box", "s": [3.5, 0.1, 1.6], "p": [10, 3.02, 0], "m": "metal"},
+        {"t": "box", "s": [15, 2.2, 2.4], "p": [7.5, -1.1, 0], "m": "accent"},
+        {"t": "tor", "rad": 1.5, "tube": 0.28, "p": [7, -2.6, 0], "ax": "z", "m": "accent"},
+        {"t": "box", "s": [0.35, 1.4, 0.4], "p": [7.2, -2.6, 0], "r": [0, 0, -10], "m": "metal"},
+        {"t": "box", "s": [0.4, 0.6, 0.4], "p": [17, 3.3, 0], "m": "dark"}
+      ]
+    },
+    {
+      "id": "buzzbox", "name": "Buzzbox", "class": "long",
+      "description": "A boxy little bullet-hose. Loud, fast, and not very careful.",
+      "stats": {"damage": 30, "accuracy": 40, "range": 40, "handling": 70, "fire_rate": 90, "goofiness": 5},
+      "mounts": {"barrel": [24.7, 1, 0], "grip": [7, -3.6, 0], "magazine": [15, -2, 0], "optic": [12, 3.6, 0], "stock": [0, 1, 0], "underbarrel": [21, -2, 0]},
+      "shapes": [
+        {"t": "box", "s": [24, 5, 3.2], "p": [12, 0.5, 0], "m": "body"},
+        {"t": "box", "s": [12, 0.6, 1.6], "p": [12, 3.3, 0], "m": "dark"},
+        {"t": "box", "s": [10, 2, 2.8], "p": [11, -2.6, 0], "m": "accent"},
+        {"t": "box", "s": [1, 4, 3.4], "p": [24.2, 0.5, 0], "m": "accent"},
+        {"t": "tor", "rad": 1.6, "tube": 0.3, "p": [9.5, -3.6, 0], "ax": "z", "m": "accent"},
+        {"t": "box", "s": [0.35, 1.5, 0.4], "p": [9.6, -3.6, 0], "r": [0, 0, -10], "m": "metal"},
+        {"t": "cyl", "r1": 0.35, "l": 2, "ax": "z", "p": [18, 1.5, 2.4], "m": "metal"},
+        {"t": "box", "s": [5, 2, 0.1], "p": [16, 1, 1.62], "m": "dark"}
+      ]
+    },
+    {
+      "id": "longboi", "name": "Longboi", "class": "long",
+      "description": "A long, serious rifle for hitting things very far away. Very serious. Mostly.",
+      "stats": {"damage": 65, "accuracy": 75, "range": 85, "handling": 35, "fire_rate": 40, "goofiness": 5},
+      "mounts": {"barrel": [46, 1, 0], "grip": [7, -3.6, 0], "magazine": [17, -2, 0], "optic": [16, 3.6, 0], "stock": [0, 1, 0], "underbarrel": [38, -1.3, 0]},
+      "shapes": [
+        {"t": "box", "s": [28, 5, 3.2], "p": [14, 0.5, 0], "m": "body"},
+        {"t": "box", "s": [18, 3.8, 3.4], "p": [37, 0.6, 0], "m": "accent"},
+        {"t": "box", "s": [2, 0.4, 3.5], "p": [31, 0.6, 0], "m": "dark"},
+        {"t": "box", "s": [2, 0.4, 3.5], "p": [35, 0.6, 0], "m": "dark"},
+        {"t": "box", "s": [2, 0.4, 3.5], "p": [39, 0.6, 0], "m": "dark"},
+        {"t": "box", "s": [2, 0.4, 3.5], "p": [43, 0.6, 0], "m": "dark"},
+        {"t": "box", "s": [40, 0.6, 1.6], "p": [24, 3.3, 0], "m": "dark"},
+        {"t": "box", "s": [12, 2, 2.8], "p": [11, -2.6, 0], "m": "accent"},
+        {"t": "tor", "rad": 1.6, "tube": 0.3, "p": [9.5, -3.6, 0], "ax": "z", "m": "accent"},
+        {"t": "box", "s": [0.35, 1.5, 0.4], "p": [9.6, -3.6, 0], "r": [0, 0, -10], "m": "metal"},
+        {"t": "cyl", "r1": 0.35, "l": 2.4, "ax": "z", "p": [20, 1.2, 2.6], "m": "metal"},
+        {"t": "sph", "rad": 0.6, "p": [20, 1.2, 3.9], "m": "metal"}
+      ]
+    },
+    {
+      "id": "thumper", "name": "Thumper", "class": "long",
+      "description": "A chunky pump shotgun. Not subtle. Never has been.",
+      "stats": {"damage": 85, "accuracy": 30, "range": 20, "handling": 50, "fire_rate": 25, "goofiness": 10},
+      "mounts": {"barrel": [18, 1.2, 0], "grip": [5, -3.6, 0], "magazine": [12, -2.1, 0], "optic": [9, 3, 0], "stock": [0, 1, 0], "underbarrel": [24, -2.8, 0]},
+      "shapes": [
+        {"t": "box", "s": [18, 5, 3.4], "p": [9, 0.5, 0], "m": "body"},
+        {"t": "cyl", "r1": 0.9, "l": 10, "ax": "x", "p": [23, -1.5, 0], "m": "metal"},
+        {"t": "box", "s": [8, 2.4, 3.2], "p": [23.5, -1.5, 0], "m": "accent"},
+        {"t": "box", "s": [0.4, 2.5, 3.3], "p": [21.5, -1.5, 0], "m": "dark"},
+        {"t": "box", "s": [0.4, 2.5, 3.3], "p": [23.5, -1.5, 0], "m": "dark"},
+        {"t": "box", "s": [0.4, 2.5, 3.3], "p": [25.5, -1.5, 0], "m": "dark"},
+        {"t": "box", "s": [9, 2, 3], "p": [8, -2.6, 0], "m": "accent"},
+        {"t": "tor", "rad": 1.6, "tube": 0.3, "p": [7.5, -3.6, 0], "ax": "z", "m": "accent"},
+        {"t": "box", "s": [0.35, 1.5, 0.4], "p": [7.6, -3.6, 0], "r": [0, 0, -10], "m": "metal"},
+        {"t": "box", "s": [5, 2.2, 0.1], "p": [11, 1, 1.72], "m": "dark"}
+      ]
+    },
+    {
+      "id": "zapomatic", "name": "Zap-o-Matic 3000", "class": "long",
+      "description": "A ray gun from the future (or a toy shop). Goes zap. Probably.",
+      "stats": {"damage": 50, "accuracy": 50, "range": 50, "handling": 60, "fire_rate": 60, "goofiness": 60},
+      "mounts": {"barrel": [20, 1, 0], "grip": [5, -3, 0], "magazine": [12, -1.4, 0], "optic": [14, 3.5, 0], "stock": [-1.2, 1, 0], "underbarrel": [16, -1.4, 0]},
+      "shapes": [
+        {"t": "cyl", "r1": 2.6, "l": 16, "ax": "x", "p": [8, 1, 0], "m": "body"},
+        {"t": "sph", "rad": 2.6, "sc": [0.6, 1, 1], "p": [0, 1, 0], "m": "body"},
+        {"t": "cyl", "r1": 2.6, "r2": 1.2, "l": 4, "ax": "x", "p": [18, 1, 0], "m": "accent"},
+        {"t": "tor", "rad": 2.75, "tube": 0.35, "ax": "x", "p": [6, 1, 0], "m": "glow"},
+        {"t": "tor", "rad": 2.75, "tube": 0.35, "ax": "x", "p": [9, 1, 0], "m": "glow"},
+        {"t": "tor", "rad": 2.75, "tube": 0.35, "ax": "x", "p": [12, 1, 0], "m": "glow"},
+        {"t": "box", "s": [5, 2.4, 0.3], "p": [2.5, 4, 0], "r": [0, 0, 12], "m": "accent"},
+        {"t": "box", "s": [5, 0.3, 2.2], "p": [2.5, 1, 3.4], "m": "accent"},
+        {"t": "box", "s": [5, 0.3, 2.2], "p": [2.5, 1, -3.4], "m": "accent"},
+        {"t": "sph", "rad": 1.4, "p": [9, 3.4, 0], "m": "glass"},
+        {"t": "sph", "rad": 0.7, "p": [9, 3.3, 0], "m": "glow", "anim": "wobble"},
+        {"t": "box", "s": [8, 2, 2.4], "p": [7, -2, 0], "m": "accent"},
+        {"t": "tor", "rad": 1.5, "tube": 0.3, "p": [7.5, -3, 0], "ax": "z", "m": "accent"},
+        {"t": "box", "s": [0.35, 1.4, 0.4], "p": [7.6, -3, 0], "r": [0, 0, -10], "m": "metal"}
+      ]
+    }
+  ],
+  "parts": [
+    {"id": "barrel_std", "slot": "barrel", "name": "Standard",
+     "mounts": {"muzzle": [10, 0, 0]},
+     "shapes": [
+       {"t": "cyl", "r1": 0.75, "l": 10, "ax": "x", "p": [5, 0, 0], "m": "metal"},
+       {"t": "cyl", "r1": 0.95, "l": 0.6, "ax": "x", "p": [9.7, 0, 0], "m": "metal"}
+     ]},
+    {"id": "barrel_short", "slot": "barrel", "name": "Stubby", "nick": "Stubby",
+     "stats": {"handling": 10, "range": -15, "accuracy": -5},
+     "mounts": {"muzzle": [4, 0, 0]},
+     "shapes": [
+       {"t": "cyl", "r1": 0.8, "l": 4, "ax": "x", "p": [2, 0, 0], "m": "metal"}
+     ]},
+    {"id": "barrel_long", "slot": "barrel", "name": "Marksman", "nick": "Long-Range",
+     "stats": {"range": 20, "accuracy": 10, "handling": -15},
+     "mounts": {"muzzle": [24, 0, 0]},
+     "shapes": [
+       {"t": "cyl", "r1": 0.8, "r2": 0.65, "l": 24, "ax": "x", "p": [12, 0, 0], "m": "metal"},
+       {"t": "cyl", "r1": 1, "l": 0.8, "ax": "x", "p": [6, 0, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.9, "l": 0.6, "ax": "x", "p": [23.6, 0, 0], "m": "dark"}
+     ]},
+    {"id": "barrel_heavy", "slot": "barrel", "name": "Heavy Fluted", "nick": "Heavy",
+     "stats": {"damage": 10, "accuracy": 5, "handling": -10, "fire_rate": -5},
+     "mounts": {"muzzle": [15, 0, 0]},
+     "shapes": [
+       {"t": "cyl", "r1": 1.1, "l": 15, "ax": "x", "p": [7.5, 0, 0], "seg": 8, "m": "metal"},
+       {"t": "cyl", "r1": 1.3, "l": 0.8, "ax": "x", "p": [2, 0, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1.3, "l": 0.8, "ax": "x", "p": [7, 0, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1.3, "l": 0.8, "ax": "x", "p": [12, 0, 0], "m": "dark"}
+     ]},
+    {"id": "barrel_double", "slot": "barrel", "name": "Double Trouble", "nick": "Double-Barreled",
+     "stats": {"damage": 15, "fire_rate": -10, "accuracy": -10, "goofiness": 15},
+     "mounts": {"muzzle": [12, 0, 0]},
+     "shapes": [
+       {"t": "cyl", "r1": 0.7, "l": 12, "ax": "x", "p": [6, 0, 0.8], "m": "metal"},
+       {"t": "cyl", "r1": 0.7, "l": 12, "ax": "x", "p": [6, 0, -0.8], "m": "metal"},
+       {"t": "box", "s": [1, 1.6, 3.2], "p": [2, 0, 0], "m": "accent"},
+       {"t": "box", "s": [1, 1.6, 3.2], "p": [10, 0, 0], "m": "accent"}
+     ]},
+    {"id": "barrel_tesla", "slot": "barrel", "name": "Tesla Coil", "nick": "Electric",
+     "stats": {"damage": 5, "range": 10, "accuracy": -5, "goofiness": 25},
+     "mounts": {"muzzle": [15, 0, 0]},
+     "shapes": [
+       {"t": "cyl", "r1": 0.5, "l": 14, "ax": "x", "p": [7, 0, 0], "m": "metal"},
+       {"t": "tor", "rad": 0.95, "tube": 0.2, "ax": "x", "p": [2, 0, 0], "m": "glow"},
+       {"t": "tor", "rad": 0.95, "tube": 0.2, "ax": "x", "p": [4, 0, 0], "m": "glow"},
+       {"t": "tor", "rad": 0.95, "tube": 0.2, "ax": "x", "p": [6, 0, 0], "m": "glow"},
+       {"t": "tor", "rad": 0.95, "tube": 0.2, "ax": "x", "p": [8, 0, 0], "m": "glow"},
+       {"t": "tor", "rad": 0.95, "tube": 0.2, "ax": "x", "p": [10, 0, 0], "m": "glow"},
+       {"t": "tor", "rad": 0.95, "tube": 0.2, "ax": "x", "p": [12, 0, 0], "m": "glow"},
+       {"t": "sph", "rad": 0.9, "p": [14.3, 0, 0], "m": "glow", "anim": "wobble"}
+     ]},
+    {"id": "barrel_noodle", "slot": "barrel", "name": "Pool Noodle", "nick": "Squishy",
+     "stats": {"damage": -40, "range": -10, "handling": 5, "goofiness": 40},
+     "mounts": {"muzzle": [20, 0, 0]},
+     "shapes": [
+       {"t": "cyl", "r1": 1.5, "l": 20, "ax": "x", "p": [10, 0, 0], "seg": 8, "m": "plastic", "c": "#36d17a"},
+       {"t": "cyl", "r1": 0.55, "l": 20.1, "ax": "x", "p": [10, 0, 0], "m": "dark"}
+     ]},
+
+    {"id": "muzzle_comp", "slot": "muzzle", "name": "Compensator",
+     "stats": {"accuracy": 8, "handling": -2},
+     "shapes": [
+       {"t": "box", "s": [3, 1.8, 1.8], "p": [1.5, 0, 0], "m": "metal"},
+       {"t": "box", "s": [0.4, 0.1, 1.2], "p": [0.8, 0.92, 0], "m": "dark"},
+       {"t": "box", "s": [0.4, 0.1, 1.2], "p": [1.6, 0.92, 0], "m": "dark"},
+       {"t": "box", "s": [0.4, 0.1, 1.2], "p": [2.4, 0.92, 0], "m": "dark"}
+     ]},
+    {"id": "muzzle_suppressor", "slot": "muzzle", "name": "Suppressor", "nick": "Silent",
+     "stats": {"accuracy": 5, "range": -5, "handling": -8},
+     "shapes": [
+       {"t": "cyl", "r1": 1.3, "l": 11, "ax": "x", "p": [5.5, 0, 0], "seg": 24, "m": "dark"},
+       {"t": "cyl", "r1": 1.36, "l": 0.5, "ax": "x", "p": [10.9, 0, 0], "seg": 24, "m": "metal"}
+     ]},
+    {"id": "muzzle_flash", "slot": "muzzle", "name": "Flash Hider",
+     "stats": {"accuracy": 3},
+     "shapes": [
+       {"t": "cyl", "r1": 0.9, "l": 3, "ax": "x", "p": [1.5, 0, 0], "seg": 6, "m": "metal"}
+     ]},
+    {"id": "muzzle_brake", "slot": "muzzle", "name": "Muzzle Brake",
+     "stats": {"accuracy": 10, "handling": -4},
+     "shapes": [
+       {"t": "box", "s": [4, 2.2, 2.4], "p": [2, 0, 0], "m": "metal"},
+       {"t": "box", "s": [0.6, 1.6, 2.6], "p": [1, 0, 0], "m": "dark"},
+       {"t": "box", "s": [0.6, 1.6, 2.6], "p": [2, 0, 0], "m": "dark"},
+       {"t": "box", "s": [0.6, 1.6, 2.6], "p": [3, 0, 0], "m": "dark"}
+     ]},
+    {"id": "muzzle_duck", "slot": "muzzle", "name": "Rubber Duck", "nick": "Quacking",
+     "stats": {"accuracy": -15, "goofiness": 40},
+     "shapes": [
+       {"t": "sph", "rad": 1.8, "sc": [1.25, 0.85, 1], "p": [2.2, 0.2, 0], "m": "plastic", "c": "#ffd23f"},
+       {"t": "sph", "rad": 1.1, "p": [3.4, 1.9, 0], "m": "plastic", "c": "#ffd23f"},
+       {"t": "cyl", "r1": 0.55, "r2": 0.2, "l": 1.2, "ax": "x", "p": [4.8, 1.7, 0], "m": "plastic", "c": "#ff8a1f"},
+       {"t": "sph", "rad": 0.18, "p": [4.1, 2.3, 0.75], "m": "plastic", "c": "#111111"},
+       {"t": "sph", "rad": 0.18, "p": [4.1, 2.3, -0.75], "m": "plastic", "c": "#111111"},
+       {"t": "cyl", "r1": 0.1, "r2": 0.8, "l": 1.4, "ax": "x", "p": [0.1, 1.2, 0], "r": [0, 0, 150], "m": "plastic", "c": "#ffd23f"}
+     ]},
+    {"id": "muzzle_horn", "slot": "muzzle", "name": "Party Horn", "nick": "Party",
+     "stats": {"damage": -5, "range": -5, "goofiness": 30},
+     "shapes": [
+       {"t": "cyl", "r1": 0.6, "r2": 2.4, "l": 6, "ax": "x", "p": [3, 0, 0], "seg": 20, "m": "plastic", "c": "#ff4f9a"},
+       {"t": "tor", "rad": 1.22, "tube": 0.15, "ax": "x", "p": [2, 0, 0], "m": "plastic", "c": "#ffd23f"},
+       {"t": "tor", "rad": 1.82, "tube": 0.15, "ax": "x", "p": [4, 0, 0], "m": "plastic", "c": "#ffd23f"},
+       {"t": "tor", "rad": 2.4, "tube": 0.18, "ax": "x", "p": [6, 0, 0], "m": "plastic", "c": "#12b5a6"}
+     ]},
+
+    {"id": "grip_std", "slot": "grip", "name": "Standard",
+     "shapes": [
+       {"t": "box", "s": [2.8, 7.5, 2.4], "p": [-0.75, -3.6, 0], "r": [0, 0, -12], "m": "dark"}
+     ]},
+    {"id": "grip_rubber", "slot": "grip", "name": "Rubber",
+     "stats": {"handling": 8, "accuracy": 3},
+     "shapes": [
+       {"t": "box", "s": [2.8, 7.5, 2.4], "p": [-0.75, -3.6, 0], "r": [0, 0, -12], "m": "dark"},
+       {"t": "sph", "rad": 0.55, "sc": [1, 1, 1.9], "p": [0.9, -2.4, 0], "m": "dark"},
+       {"t": "sph", "rad": 0.55, "sc": [1, 1, 1.9], "p": [0.6, -3.9, 0], "m": "dark"},
+       {"t": "sph", "rad": 0.55, "sc": [1, 1, 1.9], "p": [0.3, -5.4, 0], "m": "dark"}
+     ]},
+    {"id": "grip_wood", "slot": "grip", "name": "Walnut", "nick": "Classy",
+     "stats": {"handling": 3, "accuracy": 2, "goofiness": 2},
+     "shapes": [
+       {"t": "box", "s": [2.8, 7.5, 2.4], "p": [-0.75, -3.6, 0], "r": [0, 0, -12], "m": "plastic", "c": "#7a4a26"},
+       {"t": "sph", "rad": 0.45, "sc": [1, 1, 0.3], "p": [-0.7, -3.3, 1.22], "m": "metal"},
+       {"t": "sph", "rad": 0.45, "sc": [1, 1, 0.3], "p": [-0.7, -3.3, -1.22], "m": "metal"}
+     ]},
+    {"id": "grip_skeleton", "slot": "grip", "name": "Skeleton", "nick": "Featherweight",
+     "stats": {"handling": 12, "accuracy": -3},
+     "shapes": [
+       {"t": "box", "s": [0.8, 7.5, 2], "p": [0.23, -3.81, 0], "r": [0, 0, -12], "m": "accent"},
+       {"t": "box", "s": [0.8, 7.5, 2], "p": [-1.73, -3.39, 0], "r": [0, 0, -12], "m": "accent"},
+       {"t": "box", "s": [2.8, 0.8, 2], "p": [-1.46, -6.93, 0], "r": [0, 0, -12], "m": "accent"}
+     ]},
+    {"id": "grip_arcade", "slot": "grip", "name": "Arcade Stick", "nick": "Arcade",
+     "stats": {"handling": -5, "accuracy": -5, "goofiness": 35},
+     "shapes": [
+       {"t": "box", "s": [3, 0.8, 2.6], "p": [-0.5, -0.3, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.4, "l": 6, "ax": "y", "p": [-0.5, -3.4, 0], "m": "metal"},
+       {"t": "sph", "rad": 1.6, "p": [-0.5, -7, 0], "m": "plastic", "c": "#ff2d3d"}
+     ]},
+
+    {"id": "stock_fixed", "slot": "stock", "name": "Fixed",
+     "stats": {"accuracy": 10, "range": 3, "handling": -8},
+     "shapes": [
+       {"t": "box", "s": [14, 4.4, 2.8], "p": [-7, -1.2, 0], "m": "accent"},
+       {"t": "box", "s": [12, 1.4, 2.6], "p": [-7.5, 1.4, 0], "r": [0, 0, 4], "m": "accent"},
+       {"t": "box", "s": [1, 6.4, 3], "p": [-14.3, -1, 0], "m": "dark"}
+     ]},
+    {"id": "stock_folding", "slot": "stock", "name": "Folding",
+     "stats": {"accuracy": 5, "handling": 5},
+     "shapes": [
+       {"t": "box", "s": [1.2, 2, 2], "p": [-0.6, 0, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.35, "l": 12, "ax": "x", "p": [-6, 0, 0], "m": "metal"},
+       {"t": "cyl", "r1": 0.35, "l": 10, "ax": "x", "p": [-7, -3.4, 0], "m": "metal"},
+       {"t": "cyl", "r1": 0.35, "l": 3.4, "ax": "y", "p": [-2, -1.7, 0], "m": "metal"},
+       {"t": "box", "s": [0.8, 5.4, 2.2], "p": [-12.2, -1.6, 0], "m": "dark"}
+     ]},
+    {"id": "stock_precision", "slot": "stock", "name": "Precision", "nick": "Precision",
+     "stats": {"accuracy": 18, "range": 5, "handling": -14},
+     "shapes": [
+       {"t": "box", "s": [16, 4, 2.8], "p": [-8, -1.5, 0], "m": "accent"},
+       {"t": "box", "s": [7, 1.4, 2.4], "p": [-9, 1.2, 0], "m": "dark"},
+       {"t": "box", "s": [1.2, 6.6, 3], "p": [-16.4, -1.6, 0], "m": "dark"},
+       {"t": "box", "s": [4, 2.4, 2], "p": [-12, -4.5, 0], "m": "accent"}
+     ]},
+    {"id": "stock_baguette", "slot": "stock", "name": "Baguette", "nick": "Bakery-Fresh",
+     "stats": {"accuracy": 2, "handling": 2, "goofiness": 35},
+     "shapes": [
+       {"t": "cyl", "r1": 2.1, "l": 16, "ax": "x", "p": [-8, -0.8, 0], "m": "plastic", "c": "#d9a25a"},
+       {"t": "sph", "rad": 2.1, "sc": [0.9, 1, 1], "p": [-16, -0.8, 0], "m": "plastic", "c": "#d9a25a"},
+       {"t": "box", "s": [0.5, 0.3, 2.4], "p": [-4, 1.25, 0], "r": [0, 35, 0], "m": "plastic", "c": "#f3dcae"},
+       {"t": "box", "s": [0.5, 0.3, 2.4], "p": [-8, 1.25, 0], "r": [0, 35, 0], "m": "plastic", "c": "#f3dcae"},
+       {"t": "box", "s": [0.5, 0.3, 2.4], "p": [-12, 1.25, 0], "r": [0, 35, 0], "m": "plastic", "c": "#f3dcae"}
+     ]},
+
+    {"id": "optic_iron", "slot": "optic", "name": "Iron Sights",
+     "stats": {"accuracy": 2},
+     "shapes": [
+       {"t": "box", "s": [0.6, 1.2, 0.5], "p": [-4, 0.6, 0.5], "m": "dark"},
+       {"t": "box", "s": [0.6, 1.2, 0.5], "p": [-4, 0.6, -0.5], "m": "dark"},
+       {"t": "box", "s": [0.5, 1.4, 0.4], "p": [6, 0.7, 0], "m": "dark"}
+     ]},
+    {"id": "optic_red_dot", "slot": "optic", "name": "Red Dot",
+     "stats": {"accuracy": 8, "handling": 2},
+     "shapes": [
+       {"t": "box", "s": [3, 0.8, 2], "p": [0, 0.4, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1.2, "l": 3, "ax": "x", "p": [0, 2, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1, "l": 0.1, "ax": "x", "p": [1.55, 2, 0], "m": "glass"},
+       {"t": "sph", "rad": 0.14, "p": [1.65, 2, 0], "m": "glow", "c": "#ff2030"}
+     ]},
+    {"id": "optic_holo", "slot": "optic", "name": "Holo Sight",
+     "stats": {"accuracy": 10},
+     "shapes": [
+       {"t": "box", "s": [5, 0.8, 2.4], "p": [0, 0.4, 0], "m": "dark"},
+       {"t": "box", "s": [4, 2.6, 0.3], "p": [0.5, 2, 1.2], "m": "dark"},
+       {"t": "box", "s": [4, 2.6, 0.3], "p": [0.5, 2, -1.2], "m": "dark"},
+       {"t": "box", "s": [4, 0.3, 2.7], "p": [0.5, 3.3, 0], "m": "dark"},
+       {"t": "box", "s": [0.12, 2.2, 2.1], "p": [1.5, 2, 0], "m": "glass"},
+       {"t": "tor", "rad": 0.5, "tube": 0.06, "ax": "x", "p": [1.42, 2, 0], "m": "glow", "c": "#ff2030"}
+     ]},
+    {"id": "optic_scope", "slot": "optic", "name": "Long Scope", "nick": "Sniper",
+     "stats": {"accuracy": 15, "range": 15, "handling": -10},
+     "shapes": [
+       {"t": "box", "s": [1, 1.6, 1], "p": [-3, 0.8, 0], "m": "dark"},
+       {"t": "box", "s": [1, 1.6, 1], "p": [3, 0.8, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.9, "l": 14, "ax": "x", "p": [0, 2.4, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.9, "r2": 1.6, "l": 3, "ax": "x", "p": [8.5, 2.4, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1.4, "r2": 0.9, "l": 2.5, "ax": "x", "p": [-8.2, 2.4, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1.5, "l": 0.1, "ax": "x", "p": [10.05, 2.4, 0], "m": "glass"},
+       {"t": "cyl", "r1": 0.6, "l": 1.2, "ax": "y", "p": [0, 3.6, 0], "m": "metal"},
+       {"t": "cyl", "r1": 0.6, "l": 1.2, "ax": "z", "p": [0, 2.4, 1.2], "m": "metal"}
+     ]},
+    {"id": "optic_googly", "slot": "optic", "name": "Googly Eye", "nick": "Googly",
+     "stats": {"accuracy": -10, "goofiness": 30},
+     "shapes": [
+       {"t": "box", "s": [0.6, 0.8, 0.6], "p": [0, 0.4, 0], "m": "dark"},
+       {"t": "cyl", "r1": 2.4, "l": 0.8, "ax": "z", "p": [0, 3, 0], "seg": 32, "m": "plastic", "c": "#ffffff"},
+       {"t": "sph", "rad": 1, "sc": [1, 1, 0.4], "p": [0.6, 2.6, 0.45], "m": "plastic", "c": "#111111", "anim": "wobble"},
+       {"t": "sph", "rad": 1, "sc": [1, 1, 0.4], "p": [0.6, 2.6, -0.45], "m": "plastic", "c": "#111111", "anim": "wobble"}
+     ]},
+
+    {"id": "mag_pistol_ext", "slot": "magazine", "name": "Extended", "classes": ["pistol"],
+     "stats": {"fire_rate": 10, "handling": -5},
+     "shapes": [
+       {"t": "box", "s": [2.2, 5, 1.9], "p": [0, -2.2, 0], "r": [0, 0, -12], "m": "dark"},
+       {"t": "box", "s": [2.7, 0.6, 2.3], "p": [-0.55, -4.8, 0], "r": [0, 0, -12], "m": "accent"}
+     ]},
+    {"id": "mag_pistol_drum", "slot": "magazine", "name": "Drum", "nick": "Drum-Fed", "classes": ["pistol"],
+     "stats": {"fire_rate": 15, "handling": -15, "goofiness": 10},
+     "shapes": [
+       {"t": "box", "s": [2, 2.2, 1.8], "p": [-0.2, -1, 0], "m": "dark"},
+       {"t": "cyl", "r1": 3, "l": 2.6, "ax": "z", "p": [-0.6, -4.6, 0], "seg": 28, "m": "dark"},
+       {"t": "cyl", "r1": 1, "l": 2.8, "ax": "z", "p": [-0.6, -4.6, 0], "m": "metal"}
+     ]},
+    {"id": "mag_box", "slot": "magazine", "name": "Box", "classes": ["long"],
+     "shapes": [
+       {"t": "box", "s": [2.6, 8, 2], "p": [0.6, -4, 0], "r": [0, 0, 8], "m": "dark"},
+       {"t": "box", "s": [3, 0.6, 2.4], "p": [1.16, -7.96, 0], "r": [0, 0, 8], "m": "accent"}
+     ]},
+    {"id": "mag_curved", "slot": "magazine", "name": "Curved", "classes": ["long"],
+     "stats": {"fire_rate": 8, "handling": -3},
+     "shapes": [
+       {"t": "box", "s": [2.6, 3.4, 2], "p": [0.3, -1.7, 0], "r": [0, 0, 6], "m": "dark"},
+       {"t": "box", "s": [2.6, 3.4, 2], "p": [1, -4.9, 0], "r": [0, 0, 18], "m": "dark"},
+       {"t": "box", "s": [2.6, 3.4, 2], "p": [2.4, -7.8, 0], "r": [0, 0, 30], "m": "dark"}
+     ]},
+    {"id": "mag_drum", "slot": "magazine", "name": "Drum", "nick": "Drum-Fed", "classes": ["long"],
+     "stats": {"fire_rate": 20, "handling": -18},
+     "shapes": [
+       {"t": "box", "s": [2.6, 2.4, 2], "p": [0, -1.2, 0], "m": "dark"},
+       {"t": "cyl", "r1": 4, "l": 3, "ax": "z", "p": [0.5, -5.6, 0], "seg": 32, "m": "dark"},
+       {"t": "cyl", "r1": 1.3, "l": 3.2, "ax": "z", "p": [0.5, -5.6, 0], "m": "metal"}
+     ]},
+    {"id": "mag_twin", "slot": "magazine", "name": "Jungle Twin", "nick": "Twin-Mag", "classes": ["long"],
+     "stats": {"fire_rate": 12, "handling": -6, "goofiness": 5},
+     "shapes": [
+       {"t": "box", "s": [2.6, 8, 2], "p": [0.6, -4, 1.05], "r": [0, 0, 8], "m": "dark"},
+       {"t": "box", "s": [2.6, 8, 2], "p": [0.6, -4, -1.05], "r": [0, 0, 8], "m": "dark"},
+       {"t": "box", "s": [2.8, 1.4, 4.4], "p": [0.95, -5, 0], "r": [0, 0, 8], "m": "plastic", "c": "#3a6be0"}
+     ]},
+    {"id": "mag_banana", "slot": "magazine", "name": "Actual Banana", "nick": "Potassium-Powered", "classes": ["long"],
+     "stats": {"fire_rate": 5, "damage": -5, "goofiness": 40},
+     "shapes": [
+       {"t": "cyl", "r1": 1.3, "r2": 1.2, "l": 3, "ax": "y", "p": [0.2, -1.3, 0], "r": [0, 0, 5], "m": "plastic", "c": "#f5d33a"},
+       {"t": "cyl", "r1": 1.3, "l": 3, "ax": "y", "p": [0.8, -4.1, 0], "r": [0, 0, 15], "m": "plastic", "c": "#f5d33a"},
+       {"t": "cyl", "r1": 1.1, "r2": 1.3, "l": 3, "ax": "y", "p": [1.9, -6.8, 0], "r": [0, 0, 28], "m": "plastic", "c": "#f5d33a"},
+       {"t": "cyl", "r1": 0.5, "r2": 1.1, "l": 2.4, "ax": "y", "p": [3.3, -9.1, 0], "r": [0, 0, 40], "m": "plastic", "c": "#f5d33a"},
+       {"t": "sph", "rad": 0.45, "p": [4.1, -10.2, 0], "m": "plastic", "c": "#5a3b1a"}
+     ]},
+
+    {"id": "ub_foregrip", "slot": "underbarrel", "name": "Vertical Grip",
+     "stats": {"handling": 5, "accuracy": 6},
+     "shapes": [
+       {"t": "cyl", "r1": 0.9, "l": 5.5, "ax": "y", "p": [0, -2.75, 0], "seg": 12, "m": "dark"},
+       {"t": "sph", "rad": 0.9, "p": [0, -5.5, 0], "m": "dark"}
+     ]},
+    {"id": "ub_angled", "slot": "underbarrel", "name": "Angled Grip",
+     "stats": {"handling": 8, "accuracy": 3},
+     "shapes": [
+       {"t": "box", "s": [4.5, 2.2, 2], "p": [-0.5, -1.2, 0], "r": [0, 0, 22], "m": "dark"}
+     ]},
+    {"id": "ub_bipod", "slot": "underbarrel", "name": "Bipod",
+     "stats": {"accuracy": 15, "handling": -12},
+     "shapes": [
+       {"t": "box", "s": [1.6, 1, 2], "p": [0, -0.5, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.25, "l": 9, "ax": "y", "p": [0, -5, 1.6], "r": [-12, 0, 0], "m": "metal"},
+       {"t": "cyl", "r1": 0.25, "l": 9, "ax": "y", "p": [0, -5, -1.6], "r": [12, 0, 0], "m": "metal"},
+       {"t": "sph", "rad": 0.45, "p": [0, -9.4, 2.5], "m": "dark"},
+       {"t": "sph", "rad": 0.45, "p": [0, -9.4, -2.5], "m": "dark"}
+     ]},
+    {"id": "ub_flashlight", "slot": "underbarrel", "name": "Flashlight",
+     "stats": {"accuracy": 2},
+     "shapes": [
+       {"t": "box", "s": [2, 1, 1.6], "p": [0, -0.5, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.9, "l": 6, "ax": "x", "p": [0, -1.9, 0], "m": "dark"},
+       {"t": "cyl", "r1": 0.9, "r2": 1.2, "l": 1.4, "ax": "x", "p": [3.7, -1.9, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1.1, "l": 0.1, "ax": "x", "p": [4.45, -1.9, 0], "m": "glow", "c": "#fff4c2"}
+     ]},
+    {"id": "ub_laser", "slot": "underbarrel", "name": "Laser",
+     "stats": {"accuracy": 8, "goofiness": 5},
+     "shapes": [
+       {"t": "box", "s": [2, 1, 1.4], "p": [0, -0.5, 0], "m": "dark"},
+       {"t": "box", "s": [3, 1.4, 1.4], "p": [0, -1.6, 0], "m": "dark"},
+       {"t": "sph", "rad": 0.3, "p": [1.55, -1.6, 0], "m": "glow", "c": "#ff2030"},
+       {"t": "cyl", "r1": 0.06, "l": 60, "ax": "x", "p": [31.6, -1.6, 0], "m": "glow", "c": "#ff2030", "nofit": true}
+     ]},
+    {"id": "ub_confetti", "slot": "underbarrel", "name": "Confetti Cannon", "nick": "Confetti",
+     "stats": {"damage": 5, "handling": -5, "goofiness": 30},
+     "shapes": [
+       {"t": "box", "s": [3, 1, 1.8], "p": [0, -0.5, 0], "m": "dark"},
+       {"t": "cyl", "r1": 1.4, "l": 10, "ax": "x", "p": [2.5, -2.4, 0], "m": "plastic", "c": "#7b5cff"},
+       {"t": "tor", "rad": 1.4, "tube": 0.25, "ax": "x", "p": [7.5, -2.4, 0], "m": "glow", "c": "#ffd23f"}
+     ]}
+  ]
+}

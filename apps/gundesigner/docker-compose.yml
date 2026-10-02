@@ -1,0 +1,59 @@
+# Gun Designer: https://gundesigner.2haks.xyz
+# Caddy runs on the host, so each service publishes on 127.0.0.1 only.
+# (Docker-published ports skip UFW, so never publish on 0.0.0.0.)
+# Ports are registered in /opt/apps/PORTS.md.
+
+name: gundesigner
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  networks: [web-proxy]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  api:
+    <<: *hardening
+    build: ./api
+    image: gundesigner-api:local
+    environment:
+      PARTS_FILE: /content/parts.json
+      GUNDESIGNER_DB: /var/lib/gundesigner/designs.db
+    volumes:
+      # Mount the folder, not the file, so edits that replace parts.json are seen.
+      - ./content:/content:ro
+      # SQLite database of saved designs. Owned by uid 10001 on the host.
+      - ./data:/var/lib/gundesigner
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8402:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    <<: *hardening
+    build: ./web
+    image: gundesigner-web:local
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8401:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  web-proxy:
+    external: true

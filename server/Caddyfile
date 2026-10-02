@@ -81,3 +81,16 @@ portal.2haks.xyz {
 		reverse_proxy 127.0.0.1:8301
 	}
 }
+
+gundesigner.2haks.xyz {
+	encode zstd gzip
+	handle /api/* {
+		request_body {
+			max_size 8KB
+		}
+		reverse_proxy 127.0.0.1:8402
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8401
+	}
+}

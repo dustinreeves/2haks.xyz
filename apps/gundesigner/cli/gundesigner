@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""gundesigner: look at saved guns and check the parts catalog.
+
+  gundesigner list [--base longboi]   newest saved designs
+  gundesigner show CODE               one design, part by part, with stats
+  gundesigner parts                   every base gun and part
+  gundesigner validate                check content/parts.json after editing it
+
+Needs only Python 3. Set GUNDESIGNER_API to use another server.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+API = os.environ.get("GUNDESIGNER_API", "https://gundesigner.2haks.xyz").rstrip("/")
+PARTS_FILE = Path(os.environ.get("GUNDESIGNER_PARTS", ROOT / "content" / "parts.json"))
+
+
+def get(path: str):
+    req = urllib.request.Request(f"{API}/api{path}", headers={"User-Agent": "gundesigner-cli"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as res:
+            return json.load(res)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.load(e).get("detail", e.reason)
+        except ValueError:
+            detail = e.reason
+        sys.exit(f"error: {detail}")
+    except urllib.error.URLError as e:
+        sys.exit(f"error: can't reach {API} ({e.reason})")
+
+
+def bar(v: int, width: int = 20) -> str:
+    filled = round(v / 100 * width)
+    return "█" * filled + "░" * (width - filled)
+
+
+def cmd_list(args):
+    q = {"limit": args.limit}
+    if args.base:
+        q["base"] = args.base
+    designs = get("/designs?" + urllib.parse.urlencode(q))["designs"]
+    if not designs:
+        print("No saved designs yet.")
+    for d in designs:
+        print(f"{d['code']}  {d['created'][:10]}  {d['name']}")
+
+
+def cmd_show(args):
+    d = get(f"/designs/{urllib.parse.quote(args.code)}")
+    cat = get("/parts")
+    parts = {p["id"]: p for p in cat["parts"]}
+    bases = {b["id"]: b for b in cat["bases"]}
+    design = d["design"]
+    print(f"{d['name']}  ({d['code']}, saved {d['created'][:10]})")
+    print(f"  {API}/?d={d['code']}\n")
+    print(f"  Base       {bases.get(design['base'], {}).get('name', design['base'])}")
+    for slot in cat["slots"]:
+        pid = design["parts"].get(slot["id"])
+        if pid:
+            print(f"  {slot['name']:<10} {parts.get(pid, {}).get('name', pid)}")
+    p = design["paint"]
+    print(f"  {'Paint':<10} {p['finish']}, body {p['body']}, accent {p['accent']}\n")
+    if d.get("stats"):
+        for s in cat["stats"]:
+            v = d["stats"][s["id"]]
+            print(f"  {s['name']:<10} {bar(v)} {v:>3}")
+
+
+def cmd_parts(args):
+    cat = json.loads(PARTS_FILE.read_text(encoding="utf-8")) if args.local else get("/parts")
+    print("Base guns:")
+    for b in cat["bases"]:
+        print(f"  {b['id']:<18} {b['name']} ({b['class']})")
+    for slot in cat["slots"]:
+        print(f"\n{slot['name']}:")
+        for p in cat["parts"]:
+            if p["slot"] == slot["id"]:
+                fits = f"  [{', '.join(p['classes'])} only]" if p.get("classes") else ""
+                stats = ", ".join(f"{v:+d} {k}" for k, v in p.get("stats", {}).items())
+                print(f"  {p['id']:<18} {p['name']:<16} {stats}{fits}")
+    print("\nFinishes: " + ", ".join(f["id"] for f in cat["finishes"]))
+
+
+def cmd_validate(args):
+    sys.path.insert(0, str(ROOT / "api"))
+    from app.catalog import check_catalog  # noqa: E402 - shares the API's own rules
+
+    try:
+        data = json.loads(PARTS_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        sys.exit(f"{PARTS_FILE}: {e}")
+    errs = check_catalog(data)
+    for e in errs:
+        print(f"  ✗ {e}")
+    if errs:
+        sys.exit(f"{len(errs)} problem(s) in {PARTS_FILE.name}")
+    print(f"✓ {PARTS_FILE.name} is fine: {len(data['bases'])} base guns, {len(data['parts'])} parts")
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="gundesigner", description=__doc__.split("\n\n")[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("list", help="newest saved designs")
+    p.add_argument("--base", help="only this base gun (e.g. longboi)")
+    p.add_argument("--limit", type=int, default=20)
+    p.set_defaults(fn=cmd_list)
+    p = sub.add_parser("show", help="one saved design")
+    p.add_argument("code")
+    p.set_defaults(fn=cmd_show)
+    p = sub.add_parser("parts", help="every base gun and part")
+    p.add_argument("--local", action="store_true", help="read content/parts.json instead of the API")
+    p.set_defaults(fn=cmd_parts)
+    p = sub.add_parser("validate", help="check content/parts.json")
+    p.set_defaults(fn=cmd_validate)
+    args = ap.parse_args()
+    args.fn(args)
+
+
+if __name__ == "__main__":
+    main()
