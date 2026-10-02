@@ -265,6 +265,35 @@ const floor = surface({
   strength: 5,
 });
 
+// ---------- ceiling (light grey panels in a dark grid, like a test chamber ceiling) ----------
+
+const ceiling = surface({
+  color: (g, s) => {
+    g.fillStyle = "#3b4045";
+    g.fillRect(0, 0, s, s);
+    const n = 2;
+    const t = s / n;
+    const r = rng(61);
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const v = 168 + Math.floor(r() * 12);
+        g.fillStyle = `rgb(${v}, ${v + 3}, ${v + 6})`;
+        g.fillRect(i * t + 6, j * t + 6, t - 12, t - 12);
+        bevelRect(g, i * t + 6, j * t + 6, t - 12, t - 12, 3, "rgba(255,255,255,0.25)", "rgba(0,0,0,0.25)");
+      }
+    }
+    speckle(g, s, 67, 700, (v) => `rgba(90, 96, 102, ${0.03 + v * 0.05})`, 2);
+  },
+  height: (g, s) => {
+    g.fillStyle = "#202020";
+    g.fillRect(0, 0, s, s);
+    const t = s / 2;
+    g.fillStyle = "#b0b0b0";
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) g.fillRect(i * t + 6, j * t + 6, t - 12, t - 12);
+  },
+  strength: 5,
+});
+
 // ---------- cube ----------
 
 const cube = surface({
@@ -332,7 +361,7 @@ const door = surface({
   },
 });
 
-export const TEXTURES = { white, metal, floor, cube, door };
+export const TEXTURES = { white, metal, floor, ceiling, cube, door };
 
 // A box whose texture repeats every `tile` metres instead of stretching.
 // Uses material groups: 0 = sides, 1 = top (so floors can look different from walls), 2 = bottom.

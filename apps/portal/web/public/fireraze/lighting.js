@@ -5,7 +5,7 @@
 //  - Soft shadows from ceiling spot lights (added per room by the world).
 import * as THREE from "../vendor/three-0.170.0.module.min.js";
 
-export function setupLighting(renderer, scene, { exposure = 1.0, environment = 0.55 } = {}) {
+export function setupLighting(renderer, scene, { exposure = 1.0, environment = 0.9 } = {}) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = exposure;
   renderer.shadowMap.enabled = true;
@@ -22,7 +22,7 @@ export function setupLighting(renderer, scene, { exposure = 1.0, environment = 0
   pmrem.dispose();
 
   // A faint sky/ground fill so nothing is ever pitch black.
-  scene.add(new THREE.HemisphereLight(0xdfe8f0, 0x3a3f44, 0.35));
+  scene.add(new THREE.HemisphereLight(0xe6eef5, 0x4a5056, 0.7));
 }
 
 // A grey room with glowing ceiling strips and a couple of wall panels: what the surfaces "see".
@@ -51,7 +51,7 @@ function lightBoxScene() {
  * Ceiling spot lights for a room. Only the first `shadowCount` cast shadows (shadows cost a
  * lot of speed, so we keep them few).
  */
-export function ceilingLights(group, room, { spacing = 6, intensity = 90, shadowCount = 2 } = {}) {
+export function ceilingLights(group, room, { spacing = 6, intensity = 130, shadowCount = 2 } = {}) {
   const lights = [];
   const fixture = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.5, metalness: 0.6 });
   const lamp = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 3 });

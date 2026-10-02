@@ -14,6 +14,7 @@ const MATS = {
   // Low metalness on purpose: fully metallic surfaces only reflect, and look black in a dim room.
   metal: new THREE.MeshStandardMaterial({ ...TEXTURES.metal, roughness: 0.6, metalness: 0.12 }),
   floor: new THREE.MeshStandardMaterial({ ...TEXTURES.floor, roughness: 0.85, metalness: 0.1 }),
+  ceiling: new THREE.MeshStandardMaterial({ ...TEXTURES.ceiling, roughness: 0.8, metalness: 0.05 }),
   glass: new THREE.MeshStandardMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false }),
 };
 const plainVertex = `
@@ -56,7 +57,7 @@ const DOOR = new THREE.MeshStandardMaterial({ ...TEXTURES.door, roughness: 0.45,
 // Which material each face group uses (sides, top, bottom). Metal boxes get floor tiles on top.
 const FACES = {
   white: [MATS.white, MATS.white, MATS.white],
-  metal: [MATS.metal, MATS.floor, MATS.metal],
+  metal: [MATS.metal, MATS.floor, MATS.ceiling],
   glass: [MATS.glass, MATS.glass, MATS.glass],
 };
 const BUTTON_BASE = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6 });
@@ -65,6 +66,50 @@ const OBS_GLASS = new THREE.MeshStandardMaterial({
   color: 0x8fb8d8, transparent: true, opacity: 0.35, roughness: 0.05, metalness: 0.9, depthWrite: false,
 });
 const OBS_FRAME = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.5, metalness: 0.6 });
+
+// Simple pictograms for the chamber sign, drawn in `color` centred on (cx, cy).
+function drawIcon(g, kind, cx, cy, color) {
+  g.save();
+  g.translate(cx, cy);
+  g.fillStyle = color;
+  g.strokeStyle = color;
+  g.lineWidth = 5;
+  switch (kind) {
+    case "portal":
+      g.beginPath(); g.ellipse(0, 0, 16, 28, 0, 0, Math.PI * 2); g.stroke();
+      break;
+    case "twoPortals":
+      g.beginPath(); g.ellipse(-20, 0, 13, 24, 0, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.ellipse(20, 0, 13, 24, 0, 0, Math.PI * 2); g.fill();
+      break;
+    case "cube":
+      g.fillRect(-20, -14, 32, 32);
+      g.beginPath(); g.moveTo(-20, -14); g.lineTo(-10, -26); g.lineTo(22, -26); g.lineTo(12, -14); g.fill();
+      g.beginPath(); g.moveTo(12, -14); g.lineTo(22, -26); g.lineTo(22, 6); g.lineTo(12, 18); g.fill();
+      break;
+    case "button":
+      g.fillRect(-30, 14, 60, 8);
+      g.beginPath(); g.ellipse(0, 10, 22, 8, 0, Math.PI, 0); g.fill();
+      g.beginPath(); g.moveTo(0, -28); g.lineTo(0, -6); g.stroke();
+      g.beginPath(); g.moveTo(-8, -14); g.lineTo(0, -4); g.lineTo(8, -14); g.stroke();
+      break;
+    case "goo":
+      for (const y of [-8, 8]) {
+        g.beginPath();
+        for (let x = -30; x <= 30; x += 2) g.lineTo(x, y + Math.sin(x / 6) * 5);
+        g.stroke();
+      }
+      break;
+    case "fizzler":
+      for (const x of [-18, -6, 6, 18]) { g.beginPath(); g.moveTo(x, -26); g.lineTo(x, 26); g.stroke(); }
+      g.lineWidth = 3;
+      g.beginPath(); g.moveTo(-28, 0); g.lineTo(28, 0); g.stroke();
+      break;
+    default:
+      break;
+  }
+  g.restore();
+}
 
 const ASSEMBLE_TIME = 0.6; // seconds for each wall/platform to slide into place
 
@@ -232,29 +277,58 @@ export class World {
   }
 
   // Big chamber-number sign by the entrance (on the wall behind where you start).
-  _chamberSign(r, n, total, name) {
+  // Test-chamber sign (our own design in the Portal style): big number, progress bar, and icons
+  // for what's in the room. Dark icon = in this chamber, pale = not. Hangs on the right wall near the start.
+  _chamberSign(r, n, total, name, data) {
+    const icons = [
+      ["portal", true],
+      ["twoPortals", data.gun === "both"],
+      ["cube", data.cubes.length > 0],
+      ["button", data.buttons.length > 0],
+      ["goo", data.goo.length > 0],
+      ["fizzler", data.fizzlers.length > 0],
+    ];
     const tex = canvasTexture(512, (g, s) => {
-      g.fillStyle = "#f3f5f7";
+      g.fillStyle = "#f4f5f6";
       g.fillRect(0, 0, s, s);
       g.fillStyle = "#1d2126";
-      g.font = "bold 230px 'Segoe UI', system-ui, sans-serif";
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText(String(n).padStart(2, "0"), s / 2, 170);
-      g.fillRect(40, 300, s - 80, 8);
-      g.font = "600 44px 'Segoe UI', system-ui, sans-serif";
-      g.fillText(`${String(n).padStart(2, "0")} / ${String(total).padStart(2, "0")}`, s / 2, 360);
-      g.font = "600 40px 'Segoe UI', system-ui, sans-serif";
-      g.fillText(name.toUpperCase().slice(0, 18), s / 2, 440);
+      g.textBaseline = "alphabetic";
+      g.font = "bold 200px 'Segoe UI', system-ui, sans-serif";
+      g.textAlign = "left";
+      g.fillText(String(n).padStart(2, "0"), 30, 200);
+      g.font = "600 52px 'Segoe UI', system-ui, sans-serif";
+      g.fillText(`/${String(total).padStart(2, "0")}`, 285, 200);
+      // Progress bar: one block per chamber, filled up to this one.
+      const bw = (s - 60) / total;
+      for (let i = 0; i < total; i++) {
+        g.fillStyle = i < n ? "#1d2126" : "#c9ced3";
+        g.fillRect(30 + i * bw + 2, 228, bw - 4, 16);
+      }
+      g.font = "600 30px 'Segoe UI', system-ui, sans-serif";
+      g.fillStyle = "#1d2126";
+      g.fillText(name.toUpperCase().slice(0, 22), 30, 290);
+      g.fillRect(30, 310, s - 60, 4);
+      icons.forEach(([kind, on], i) => {
+        const x = 30 + (i % 3) * 156;
+        const y = 330 + Math.floor(i / 3) * 90;
+        g.fillStyle = on ? "#1d2126" : "#d5d9dd";
+        g.fillRect(x, y, 140, 80);
+        drawIcon(g, kind, x + 70, y + 40, on ? "#f4f5f6" : "#f4f5f6");
+      });
     });
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.25 });
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), mat);
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, color: 0xd0d0d0, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.04 });
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), mat);
     sign.userData.ownMaterial = true;
-    sign.position.set((r.min.x + r.max.x) / 2 + 2.5, Math.min(2.6, r.max.y - 1), r.max.z - 0.03);
-    sign.rotation.y = Math.PI;
+    const start = data.start.pos;
+    const z = THREE.MathUtils.clamp(start[2] + 1.2, r.min.z + 0.8, r.max.z - 0.8);
+    const y = THREE.MathUtils.clamp(start[1] + 0.6, r.min.y + 1, r.max.y - 0.9);
+    sign.position.set(r.max.x - 0.045, y, z); // just in front of its backing plate
+    sign.rotation.y = -Math.PI / 2;
     sign.receiveShadow = true;
-    this.group.add(sign);
+    const backing = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.62, 1.62), OBS_FRAME);
+    backing.position.set(r.max.x - 0.005, y, z);
+    this.group.add(backing, sign);
   }
 
   build(data, options = {}) {
@@ -300,7 +374,7 @@ export class World {
 
     ceilingLights(this.group, r, data.theme === "overgrown" ? { intensity: 45 } : {});
     this._observationWindow(r);
-    if (options.chamberNumber) this._chamberSign(r, options.chamberNumber, options.chamberCount, data.name);
+    if (options.chamberNumber) this._chamberSign(r, options.chamberNumber, options.chamberCount, data.name, data);
     if (data.theme === "overgrown") this._overgrowth(r, data);
     this._arrivalTube(start, options.arrivalTube !== false);
 

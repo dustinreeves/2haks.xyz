@@ -17,6 +17,8 @@
 
 - [x] Portal 2 plan, step 2 (chambers): walls slide in and platforms rise as a chamber starts (`World.animate`), elevator rides (arrive in a glass tube that sinks into the floor; ride the exit lift up), new level field `theme` ("clean" | "overgrown"), and Chamber 06 "Overgrown" (vines, leaves, moss, fallen panels, sunlight shaft through a ceiling hole with dust)
 
+- [x] More Portal-like look: brighter lighting, light-grey grid ceiling panels (`TEXTURES.ceiling`), Portal-style chamber sign (number, progress bar, icons for what's in the room) on the right wall near the start, rippling/sparkling portal rims, clean HUD (controls line fades after 9 s, smaller see-through labels)
+
 ## Tested in the browser (dev mode)
 - Chamber 01 start to finish: shot blue, walked through, came out of the orange portal, reached the exit, server accepted the time.
 - Chamber 02: portals to the ledge, picked up the cube, carried it down; the button opened the door.

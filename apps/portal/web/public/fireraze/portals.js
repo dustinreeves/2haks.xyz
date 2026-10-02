@@ -25,17 +25,21 @@ const fragmentShader = `
   void main() {
     vec2 p = (vUv - 0.5) * 2.0;
     float r = length(p);
-    if (r > 1.0) discard;
-    float rim = smoothstep(0.82, 0.97, r);
+    float a = atan(p.y, p.x);
+    // A living edge: the rim ripples and little sparks run around it.
+    float wob = 0.03 * sin(a * 7.0 + uTime * 3.0) + 0.02 * sin(a * 13.0 - uTime * 5.0);
+    if (r > 1.0 + wob * 0.5) discard;
+    float rim = smoothstep(0.8 + wob, 0.97 + wob * 0.5, r);
+    float spark = pow(max(0.0, sin(a * 11.0 + uTime * 6.0)), 24.0) + pow(max(0.0, sin(a * 17.0 - uTime * 4.0)), 24.0);
+    rim += spark * smoothstep(0.75, 0.95, r) * 0.8;
     vec3 inside;
     if (uLive > 0.5) {
       inside = texture2D(tView, gl_FragCoord.xy / uRes).rgb;
     } else {
-      float a = atan(p.y, p.x);
       float swirl = sin(a * 3.0 + r * 9.0 - uTime * 4.0) * 0.5 + 0.5;
       inside = mix(uColor * 0.2, uColor * 0.9, swirl * (1.0 - r * 0.4));
     }
-    gl_FragColor = vec4(mix(inside, uColor * 1.4 + 0.2, rim), 1.0);
+    gl_FragColor = vec4(mix(inside, uColor * 1.6 + 0.25, clamp(rim, 0.0, 1.0)) + uColor * max(0.0, rim - 1.0), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }

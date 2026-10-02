@@ -147,3 +147,11 @@ body.slowmo #slowmo-tint { opacity: 1; }
   background: rgba(0, 0, 0, 0.55); color: #e8ffe0; border-radius: 3px; pointer-events: none;
   font: 12px/1.4 ui-monospace, Consolas, monospace;
 }
+
+/* Cleaner, Portal-like HUD: small see-through chamber label, controls fade out after a while */
+#controls { transition: opacity 1.2s; }
+#controls.faded { opacity: 0; }
+#chamber { background: rgba(244, 246, 248, 0.7); border-left-width: 5px; padding: 4px 10px; }
+#chamber-num { font-size: 10px; }
+#chamber-name { font-size: 15px; }
+#timer { background: rgba(244, 246, 248, 0.7); font-size: 15px; padding: 6px 10px; }

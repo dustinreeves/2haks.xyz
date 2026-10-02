@@ -115,7 +115,7 @@ const gunGlowMat = new THREE.MeshBasicMaterial({ color: BLUE });
 const gunGlowParts = [gunGlowMat];
 let gunGlow; // the emitter tip: beams start here
 {
-  const white = new THREE.MeshPhysicalMaterial({ color: 0xf2f3f4, roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.15 });
+  const white = new THREE.MeshPhysicalMaterial({ color: 0xd4d7da, roughness: 0.4, clearcoat: 0.3, clearcoatRoughness: 0.3 });
   const black = new THREE.MeshStandardMaterial({ color: 0x1b1e21, roughness: 0.5, metalness: 0.4 });
   const grey = new THREE.MeshStandardMaterial({ color: 0x6f777e, roughness: 0.35, metalness: 0.8 });
   const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.35 });
@@ -199,7 +199,7 @@ let gunGlow; // the emitter tip: beams start here
 }
 
 function setGunColor(color) {
-  for (const m of gunGlowParts) m.color.setHex(color).multiplyScalar(2.5); // brighter than white = glows (bloom)
+  for (const m of gunGlowParts) m.color.setHex(color).multiplyScalar(1.5); // brighter than white = glows (bloom)
   gun.userData.tipLight.color.setHex(color);
 }
 setGunColor(BLUE);
@@ -749,6 +749,14 @@ function die(lines) {
   resetChamber();
 }
 
+// Keep the screen clean like Portal: the controls line shows for a few seconds per chamber, then fades.
+let controlsTimer;
+function showControlsBriefly() {
+  $("controls").classList.remove("faded");
+  clearTimeout(controlsTimer);
+  controlsTimer = setTimeout(() => $("controls").classList.add("faded"), 9000);
+}
+
 // Elevator rides: the camera rises out of a finished chamber and drops into the next one.
 let camRise = 0;
 let riseAnim = null;
@@ -782,6 +790,7 @@ async function loadChamber(i) {
   $("chamber-num").textContent = `Test chamber ${String(i + 1).padStart(2, "0")} / ${String(state.levels.length).padStart(2, "0")}`;
   $("chamber-name").textContent = data.name;
   say(data.intro);
+  showControlsBriefly();
   animateRise(3.2, 0, 1.8).then(() => {
     if (state.index !== i || state.mode !== "loading") return;
     world.openArrivalTube();
