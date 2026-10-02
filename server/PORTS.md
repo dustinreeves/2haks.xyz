@@ -13,3 +13,5 @@ Take the next free number, add a row here, and append (never replace) your block
 | 8103 | bossbuilder | api | bossbuilder.2haks.xyz/api/* |
 | 8201 | quiz | web (nginx) | quiz.2haks.xyz |
 | 8202 | quiz | api | quiz.2haks.xyz/api/* |
+| 8301 | portal | web (nginx) | portal.2haks.xyz |
+| 8302 | portal | api | portal.2haks.xyz/api/* |
