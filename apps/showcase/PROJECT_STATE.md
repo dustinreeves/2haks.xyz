@@ -1,6 +1,6 @@
 # PROJECT_STATE: showcase
 
-**Last worked on by:** Tripp (with Claude), 2026-10-01
+**Last worked on by:** Tripp (with Claude), 2026-10-02
 
 ## Progress
 - [x] API (FastAPI, read-only): `/api/health`, `/api/projects`, `/api/projects/{slug}`, docs at `/api/docs`
@@ -10,9 +10,10 @@
 - [x] Caddy site block for projects.2haks.xyz (see `deploy/Caddyfile.snippet`)
 - [x] First card: the showcase itself (Co-authored)
 - [x] RUNBOOK.md, unit tests for card validation
+- [x] 2026-10-02: `showcase edit <slug>` and `showcase remove <slug>` (confirm by typing the slug, or `--yes`), with tests in `api/tests/test_cli.py`
+- [x] 2026-10-02: checked that all 10 live app subdomains have a valid card
 
 ## Next steps
-- `showcase remove` / `showcase edit` commands (for now, edit `projects.json` by hand, then run `showcase validate`)
 - API tests with FastAPI's TestClient (needs `httpx`; currently only `cards.py` is unit-tested)
 - Add a card for each new app as it launches
 

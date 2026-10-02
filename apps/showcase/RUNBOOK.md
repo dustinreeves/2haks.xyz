@@ -80,7 +80,14 @@ showcase validate                   # check projects.json
 showcase add                        # asks questions, checks the answers, then saves
 showcase add --no-input --slug my-app --name "My App" --author Tripp \
   --description "What it does." --api-example "curl https://my-app.2haks.xyz/api/health"
+showcase edit my-app --description "Better words."   # change only the fields you pass
+showcase edit my-app --cli-example "myapp list" --cli-example "myapp show 1"   # replaces the CLI list
+showcase edit my-app --clear-api-examples
+showcase remove my-app              # asks you to type the slug to confirm
+showcase remove my-app --yes        # no question (for scripts)
 ```
+
+`edit` can't change a slug: `remove` the card and `add` it again instead.
 
 Then commit: `git add projects.json && git commit -m "Add my-app card"`.
 

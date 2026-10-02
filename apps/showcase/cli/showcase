@@ -5,6 +5,8 @@
   showcase show <slug>          one card
   showcase validate             check projects.json for mistakes
   showcase add [options]        add a card to projects.json (asks for anything missing)
+  showcase edit <slug> [opts]   change fields of a card in projects.json
+  showcase remove <slug>        delete a card from projects.json (asks first; --yes to skip)
 
 Reading uses the API (SHOWCASE_API, default https://projects.2haks.xyz).
 Pass --local to read projects.json directly instead.
@@ -174,9 +176,70 @@ def cmd_add(args) -> None:
     save_projects(args.file, projects)
 
     print(f"Added '{card['name']}' to {args.file}. The website shows it right away.")
+    print_commit_hint(args.file, f"Add {card['slug']} card")
+
+
+def print_commit_hint(path: Path, message: str) -> None:
     print("Remember to save it in Git:")
-    print(f"  git -C {args.file.parent} add {args.file.name} && "
-          f"git -C {args.file.parent} commit -m 'Add {card['slug']} card'")
+    print(f"  git -C {path.parent} add {path.name} && git -C {path.parent} commit -m '{message}'")
+
+
+def find_card(projects: list[dict], slug: str) -> int:
+    for i, project in enumerate(projects):
+        if project["slug"] == slug:
+            return i
+    raise CliError(f"no project called '{slug}'")
+
+
+EDIT_FIELDS = ("name", "launch_date", "url", "description", "author")
+
+
+def cmd_edit(args) -> None:
+    projects = load_projects(args.file)
+    i = find_card(projects, args.slug)
+    card = json.loads(json.dumps(projects[i]))  # deep copy, so a failed check changes nothing
+
+    for field in EDIT_FIELDS:
+        new = getattr(args, field)
+        if new is not None:
+            card[field] = new
+    for kind in ("api", "cli"):
+        if getattr(args, f"clear_{kind}_examples"):
+            card["examples"][kind] = []
+        new = getattr(args, f"{kind}_example")
+        if new:
+            # Replace the list rather than append, so a typo can be fixed in one go.
+            card["examples"][kind] = new
+
+    if card == projects[i]:
+        raise CliError("nothing to change (pass at least one option, see 'showcase edit -h')")
+
+    validate_card(card)
+    projects[i] = card
+    save_projects(args.file, projects)
+    print(f"Updated '{card['slug']}' in {args.file}. The website shows it right away.")
+    print_commit_hint(args.file, f"Edit {card['slug']} card")
+
+
+def cmd_remove(args) -> None:
+    projects = load_projects(args.file)
+    i = find_card(projects, args.slug)
+    card = projects[i]
+
+    if not args.yes:
+        if not sys.stdin.isatty():
+            raise CliError("add --yes to remove a card without being asked")
+        try:
+            answer = input(f"Remove '{card['name']}' ({card['slug']})? Type the slug to confirm: ").strip()
+        except EOFError:
+            answer = ""
+        if answer != card["slug"]:
+            raise CliError("not removed")
+
+    del projects[i]
+    save_projects(args.file, projects)
+    print(f"Removed '{card['slug']}' from {args.file}. The website hides it right away.")
+    print_commit_hint(args.file, f"Remove {card['slug']} card")
 
 
 # ---------- main ----------
@@ -213,6 +276,26 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--cli-example", action="append", metavar="CMD", help="repeat for more than one")
     p.add_argument("--no-input", action="store_true", help="never ask questions; fail if something is missing")
     p.set_defaults(func=cmd_add)
+
+    p = sub.add_parser("edit", help="change fields of a card in projects.json")
+    p.add_argument("slug", help="card to change (the slug itself can't be changed: remove and add instead)")
+    p.add_argument("--name")
+    p.add_argument("--launch-date", dest="launch_date", help="YYYY-MM-DD")
+    p.add_argument("--url")
+    p.add_argument("--description")
+    p.add_argument("--author", choices=AUTHORS)
+    p.add_argument("--api-example", action="append", metavar="CMD",
+                   help="replaces all API examples; repeat for more than one")
+    p.add_argument("--cli-example", action="append", metavar="CMD",
+                   help="replaces all CLI examples; repeat for more than one")
+    p.add_argument("--clear-api-examples", action="store_true", help="remove all API examples")
+    p.add_argument("--clear-cli-examples", action="store_true", help="remove all CLI examples")
+    p.set_defaults(func=cmd_edit)
+
+    p = sub.add_parser("remove", help="delete a card from projects.json")
+    p.add_argument("slug")
+    p.add_argument("-y", "--yes", action="store_true", help="don't ask for confirmation")
+    p.set_defaults(func=cmd_remove)
     return parser
 
 
