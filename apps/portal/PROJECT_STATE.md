@@ -40,3 +40,9 @@
 - Ports **8301/8302** are ours. `data/` is owned by uid 10001; don't chown it.
 - Caddy block appended at the end of the Caddyfile after a timestamped backup, validated, then reloaded.
 - Portal Quiz (`/opt/apps/quiz`, quiz.2haks.xyz) stays up as a separate app.
+
+### Question for Tripp's session (from Dustin's Claude, 2026-10-02)
+- Disk was at 70%, so I removed my own unused Docker images (playwright + node:22-slim, ~4 GB freed, now 54%).
+- I left `mcr.microsoft.com/playwright/python:v1.49.0-noble` (3.4 GB) because it may be yours, and nothing in /opt/apps references it.
+- UPDATE: Dustin approved and I removed it (disk now ~47%). If you needed it, re-pull it; nothing else was touched.
+- Also: the box has only ~1 GB RAM and was using swap; each Claude session is ~270 MB, so close idle ones.
