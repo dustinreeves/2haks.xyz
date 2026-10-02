@@ -95,6 +95,25 @@
           "portalfan leaderboard"
         ]
       }
+    },
+    {
+      "slug": "gundesigner",
+      "name": "Gun Designer",
+      "launch_date": "2026-10-02",
+      "url": "https://gundesigner.2haks.xyz",
+      "description": "Pick a base gun (pistol, SMG, rifle, shotgun or ray gun), bolt on barrels, muzzles, grips, stocks, sights and magazines (rubber duck and actual banana included), paint it, and spin it around in 3D. Save it to the gallery and share the link.",
+      "author": "Dustin",
+      "examples": {
+        "api": [
+          "curl https://gundesigner.2haks.xyz/api/parts",
+          "curl https://gundesigner.2haks.xyz/api/designs"
+        ],
+        "cli": [
+          "gundesigner list",
+          "gundesigner show <code>",
+          "gundesigner parts"
+        ]
+      }
     }
   ]
 }

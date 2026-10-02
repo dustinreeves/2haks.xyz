@@ -3,7 +3,7 @@
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
 import {
   applyGravity, castRay, CUBE_HALF, DevConsole, ENGINE, insideBox, moveBody, overlaps, physicsSettings, PortalSystem,
-  setupLighting, World,
+  DynamicResolution, PostFX, setupLighting, World,
 } from "./fireraze/index.js";
 
 const V3 = THREE.Vector3;
@@ -91,6 +91,13 @@ scene.background = new THREE.Color(0x1d2126);
 setupLighting(renderer, scene);
 
 const camera = new THREE.PerspectiveCamera(75, 1, 0.03, 200);
+const postfx = new PostFX(renderer, scene, camera);
+const dynres = new DynamicResolution({
+  onChange: (ratio) => {
+    renderer.setPixelRatio(ratio);
+    resize();
+  },
+});
 camera.rotation.order = "YXZ";
 scene.add(camera);
 
@@ -192,9 +199,10 @@ let gunGlow; // the emitter tip: beams start here
 }
 
 function setGunColor(color) {
-  for (const m of gunGlowParts) m.color.setHex(color);
+  for (const m of gunGlowParts) m.color.setHex(color).multiplyScalar(2.5); // brighter than white = glows (bloom)
   gun.userData.tipLight.color.setHex(color);
 }
+setGunColor(BLUE);
 gun.position.set(0.26, -0.24, -0.56);
 gun.scale.setScalar(0.85);
 camera.add(gun);
@@ -209,7 +217,7 @@ let beamLife = 0;
 function fireBeam(to, color) {
   recoil = 1;
   setGunColor(color);
-  beamMat.color.setHex(color);
+  beamMat.color.setHex(color).multiplyScalar(3);
   const from = gunGlow.getWorldPosition(new V3());
   const dir = new V3().subVectors(to, from);
   beam.position.copy(from).addScaledVector(dir, 0.5);
@@ -469,6 +477,10 @@ con.cvar("mat_fullbright", 0, {
   onChange: (v) => { fullbright.visible = !!v; },
 });
 con.cvar("sv_portal_placement_never_fail", 0, { help: "Portals stick to any surface.", cheat: true, min: 0, max: 1 });
+con.cvar("mat_disable_bloom", 0, { help: "Turn off the glow around bright lights.", min: 0, max: 1, onChange: (v) => { postfx.bloomEnabled = !v; } });
+con.cvar("mat_vignette", 1, { help: "Darker screen corners.", min: 0, max: 1, onChange: (v) => { postfx.vignette = v ? 0.35 : 0; } });
+con.cvar("mat_postprocess_enable", 1, { help: "All picture effects (bloom, colour grade).", min: 0, max: 1, onChange: (v) => { postfx.enabled = !!v; } });
+con.cvar("r_dynamic_resolution", 1, { help: "Lower sharpness automatically to keep the game smooth.", min: 0, max: 1, onChange: (v) => { dynres.enabled = !!v; if (!v) { renderer.setPixelRatio(dynres.max); resize(); } } });
 
 con.command("noclip", () => {
   flags.noclip = !flags.noclip;
@@ -710,7 +722,7 @@ function updateJim(dt, t) {
   if (blinkTimer < -0.15) blinkTimer = 2.5 + Math.random() * 3;
   const shut = blinkTimer < 0 ? 1 : jimMood.kind === "sad" ? 0.55 : 0.001;
   for (const lid of jimLids) lid.scale.y = THREE.MathUtils.lerp(lid.scale.y, shut, Math.min(1, dt * 25));
-  jimEyeMat.color.setHex(jimMood.kind === "sad" ? 0x1c4d77 : JIM_EYE);
+  jimEyeMat.color.setHex(jimMood.kind === "sad" ? 0x1c4d77 : JIM_EYE).multiplyScalar(jimMood.kind === "sad" ? 1 : 2.2);
   jimEyeLight.intensity = jimMood.kind === "sad" ? 0.4 : 1.2;
   return corePos;
 }
@@ -885,6 +897,7 @@ function resize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   portals.resize();
+  postfx.resize();
 }
 window.addEventListener("resize", resize);
 resize();
@@ -996,10 +1009,11 @@ function frame(realDt, t) {
   camera.rotation.set(player.pitch, player.yaw, 0);
   camera.updateMatrixWorld();
   portals.render(camera);
-  renderer.render(scene, camera);
+  postfx.render(scene, camera, dt);
 }
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
+  dynres.tick(dt);
   frame(dt, clock.elapsedTime);
 });
 

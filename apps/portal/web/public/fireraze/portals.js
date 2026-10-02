@@ -226,10 +226,12 @@ export class PortalSystem {
     return null;
   }
 
-  resize() {
+  // The view inside a portal is drawn at `viewScale` of full size (you can't tell, and it's faster).
+  // uRes stays the full size: the shader works out where it is on screen from that.
+  resize(viewScale = 0.75) {
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     for (const p of this.all) {
-      p.rt.setSize(size.x, size.y);
+      p.rt.setSize(Math.max(1, Math.round(size.x * viewScale)), Math.max(1, Math.round(size.y * viewScale)));
       p.mat.uniforms.uRes.value.copy(size);
     }
   }

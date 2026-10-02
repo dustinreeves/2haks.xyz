@@ -53,7 +53,6 @@ const FIZZLER = new THREE.ShaderMaterial({
   side: THREE.DoubleSide,
 });
 const DOOR = new THREE.MeshStandardMaterial({ ...TEXTURES.door, roughness: 0.45, metalness: 0.2 });
-const CUBE = new THREE.MeshStandardMaterial({ ...TEXTURES.cube, roughness: 0.6, metalness: 0.3 });
 // Which material each face group uses (sides, top, bottom). Metal boxes get floor tiles on top.
 const FACES = {
   white: [MATS.white, MATS.white, MATS.white],
@@ -66,6 +65,71 @@ const OBS_GLASS = new THREE.MeshStandardMaterial({
   color: 0x8fb8d8, transparent: true, opacity: 0.35, roughness: 0.05, metalness: 0.9, depthWrite: false,
 });
 const OBS_FRAME = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.5, metalness: 0.6 });
+
+// ---------- the cube: a real 3D model with depth (0.6 m across) ----------
+// Dark body, raised corner bumpers joined by edge rails, a sunken light panel on every side,
+// and a raised ring with a glowing centre on each panel.
+const CUBE_PARTS = (() => {
+  const body = new THREE.MeshStandardMaterial({ color: 0x3a4046, roughness: 0.6, metalness: 0.5 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x9aa2a9, roughness: 0.35, metalness: 0.75 });
+  const panel = new THREE.MeshStandardMaterial({ ...TEXTURES.cube, roughness: 0.55, metalness: 0.15 });
+  const ring = new THREE.MeshStandardMaterial({ color: 0x2b3035, roughness: 0.4, metalness: 0.7 });
+  const glow = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x2f9bff).multiplyScalar(2) });
+  return {
+    mats: { body, metal, panel, ring, glow },
+    core: new THREE.BoxGeometry(0.54, 0.54, 0.54),
+    corner: new THREE.BoxGeometry(0.17, 0.17, 0.17),
+    rail: new THREE.BoxGeometry(0.27, 0.07, 0.07),
+    face: new THREE.BoxGeometry(0.34, 0.34, 0.03),
+    ring: new THREE.TorusGeometry(0.085, 0.018, 10, 32),
+    dot: new THREE.CircleGeometry(0.05, 24),
+  };
+})();
+
+function makeCubeModel() {
+  const P = CUBE_PARTS;
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(P.core, P.mats.body));
+  const e = 0.3 - 0.085; // corner centres
+  for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) {
+    const c = new THREE.Mesh(P.corner, P.mats.metal);
+    c.position.set(x * e, y * e, z * 0.215);
+    g.add(c);
+  }
+  // Edge rails between corners (4 along each axis).
+  const r = 0.3 - 0.035;
+  for (const a of [-1, 1]) for (const b of [-1, 1]) {
+    const rx = new THREE.Mesh(P.rail, P.mats.metal);
+    rx.position.set(0, a * r, b * r);
+    const ry = new THREE.Mesh(P.rail, P.mats.metal);
+    ry.rotation.z = Math.PI / 2;
+    ry.position.set(a * r, 0, b * r);
+    const rz = new THREE.Mesh(P.rail, P.mats.metal);
+    rz.rotation.y = Math.PI / 2;
+    rz.position.set(a * r, b * r, 0);
+    g.add(rx, ry, rz);
+  }
+  // One sunken panel + raised ring + glowing dot per side.
+  const faces = [
+    [new THREE.Vector3(1, 0, 0), [0, Math.PI / 2, 0]], [new THREE.Vector3(-1, 0, 0), [0, -Math.PI / 2, 0]],
+    [new THREE.Vector3(0, 1, 0), [-Math.PI / 2, 0, 0]], [new THREE.Vector3(0, -1, 0), [Math.PI / 2, 0, 0]],
+    [new THREE.Vector3(0, 0, 1), [0, 0, 0]], [new THREE.Vector3(0, 0, -1), [0, Math.PI, 0]],
+  ];
+  for (const [n, rot] of faces) {
+    const side = new THREE.Group();
+    side.rotation.set(...rot);
+    side.position.copy(n).multiplyScalar(0.27); // panel sits below the rails: that's the depth
+    const face = new THREE.Mesh(P.face, P.mats.panel);
+    const ring = new THREE.Mesh(P.ring, P.mats.ring);
+    ring.position.z = 0.02;
+    const dot = new THREE.Mesh(P.dot, P.mats.glow);
+    dot.position.z = 0.017;
+    side.add(face, ring, dot);
+    g.add(side);
+  }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+  return g;
+}
 
 export class World {
   constructor(scene) {
@@ -230,7 +294,7 @@ export class World {
     const cx = (e.min.x + e.max.x) / 2;
     const cz = (e.min.z + e.max.z) / 2;
     const radius = (Math.min(e.max.x - e.min.x, e.max.z - e.min.z) / 2) * 0.9;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.06, 8, 48), new THREE.MeshBasicMaterial({ color: 0x9ff5ff }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.06, 8, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9ff5ff).multiplyScalar(2.5) }));
     ring.userData.ownMaterial = true;
     ring.rotation.x = Math.PI / 2;
     ring.position.set(cx, e.min.y + 0.05, cz);
@@ -247,8 +311,7 @@ export class World {
 
   /** Add a cube that respawns at `spawn`. */
   addCube(spawn) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), CUBE);
-    mesh.castShadow = mesh.receiveShadow = true;
+    const mesh = makeCubeModel();
     mesh.position.copy(spawn);
     this.group.add(mesh);
     const cube = { spawn: spawn.clone(), center: spawn.clone(), vel: new V3(), mesh, held: false, prev: {} };

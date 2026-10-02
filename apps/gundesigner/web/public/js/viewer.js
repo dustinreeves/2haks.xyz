@@ -165,6 +165,8 @@ export class Viewer {
     const center = box.getCenter(new THREE.Vector3());
     this.gun.position.copy(center).multiplyScalar(-1); // turn around the middle of the gun
     this.radius = box.getBoundingSphere(new THREE.Sphere()).radius;
+    if (!this.framed) this.shownRadius = this.radius; // first gun: no zoom-in from nothing
+    this.framed = true;
     this.groundY = box.min.y - center.y;
     this.applyExplode();
     if (changedSlot && this.slots[changedSlot]) this.pops.push({ group: this.slots[changedSlot], t: 0 });
@@ -225,7 +227,7 @@ export class Viewer {
     const vHalf = (this.camera.fov * Math.PI) / 360;
     const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
     // (sin, not tan, plus a margin: when the gun turns, the near end gets bigger.)
-    const dist = Math.max(this.shownRadius / Math.sin(hHalf) * 1.15, (this.shownRadius * 0.62) / Math.sin(vHalf)) * this.zoom;
+    const dist = Math.max(this.shownRadius / Math.sin(hHalf) * 1.02, (this.shownRadius * 0.62) / Math.sin(vHalf)) * this.zoom;
     this.camera.position.set(0, this.shownRadius * 0.15, dist);
     this.camera.lookAt(0, 0, 0);
     this.camera.near = dist / 50;
