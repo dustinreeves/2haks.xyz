@@ -19,3 +19,5 @@ Take the next free number, add a row here, and append (never replace) your block
 | 8402 | gundesigner | api | gundesigner.2haks.xyz/api/* |
 | 8501 | podcasts | web (nginx) | podcasts.2haks.xyz |
 | 8502 | podcasts | api | podcasts.2haks.xyz/api/* |
+| 8601 | (private site) | web (nginx) | not listed |
+| 8602 | (private site) | api | not listed |

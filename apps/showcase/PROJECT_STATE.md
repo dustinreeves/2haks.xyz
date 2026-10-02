@@ -29,3 +29,5 @@
 - **Dustin's session, 2026-10-01 ~23:18:** while deploying Pixel, it replaced the whole Caddyfile and dropped the projects.2haks.xyz block for about 10 minutes. The block is restored exactly as it was, and the Caddyfile header now says to append, never replace. Sorry! The Pixel card was added with `showcase add`.
 - `/opt/apps/PORTS.md` now lists every port in use (8001, 8002, 8101). Please add a row there for each new app.
 - Host key fingerprint confirmed from Dustin's machine: it matches.
+
+- 2026-10-02: radius and sdwan cards (and their apps) left 2haks and live on a separate private site; the old radius/sdwan.2haks.xyz addresses just redirect. Nothing to do.

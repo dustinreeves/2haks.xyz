@@ -121,34 +121,6 @@ podcasts.2haks.xyz {
 }
 
 
-radius.2haks.xyz {
-	encode zstd gzip
-	root * /opt/apps/radius/public
-	file_server
-	header {
-		X-Content-Type-Options nosniff
-		Referrer-Policy strict-origin-when-cross-origin
-		Content-Security-Policy "default-src 'self'; style-src 'self'; img-src 'self' blob:; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; connect-src 'none'"
-		Cache-Control no-cache
-	}
-}
-
-sdwan.2haks.xyz {
-	encode zstd gzip
-	root * /opt/apps/sdwan/public
-	file_server
-	header {
-		X-Content-Type-Options nosniff
-		Referrer-Policy no-referrer
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
-		Cache-Control no-cache
-	}
-	@wasm path *.wasm
-	header @wasm Content-Type application/wasm
-	@whl path *.whl
-	header @whl Content-Type application/octet-stream
-}
-
 dustinreev.es {
 	encode zstd gzip
 	root * /srv/dustinreev.es
@@ -179,4 +151,51 @@ techfire.xyz {
 
 www.techfire.xyz {
 	redir https://techfire.xyz{uri} permanent
+}
+
+projects.dustinreev.es {
+	encode zstd gzip
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8602
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8601
+	}
+}
+
+radius.dustinreev.es {
+	encode zstd gzip
+	root * /srv/projects.dustinreev.es/radius/public
+	file_server
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Content-Security-Policy "default-src 'self'; style-src 'self'; img-src 'self' blob:; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; connect-src 'none'"
+		Cache-Control no-cache
+	}
+}
+
+sdwan.dustinreev.es {
+	encode zstd gzip
+	root * /srv/projects.dustinreev.es/sdwan/public
+	file_server
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+		Cache-Control no-cache
+	}
+	@wasm path *.wasm
+	header @wasm Content-Type application/wasm
+	@whl path *.whl
+	header @whl Content-Type application/octet-stream
+}
+
+# Old 2haks addresses forward to the new home.
+radius.2haks.xyz {
+	redir https://radius.dustinreev.es{uri} permanent
+}
+
+sdwan.2haks.xyz {
+	redir https://sdwan.dustinreev.es{uri} permanent
 }
