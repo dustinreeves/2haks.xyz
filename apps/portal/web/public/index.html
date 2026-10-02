@@ -14,7 +14,8 @@
     <div id="chamber"><span id="chamber-num"></span><strong id="chamber-name"></strong></div>
     <div id="timer">0:00.0</div>
     <div id="crosshair" aria-hidden="true"><span class="l"></span><span class="r"></span></div>
-    <p id="controls">WASD move · Space jump · Left click <span class="blue">blue</span> · <span id="orange-help">Right click <span class="orange">orange</span> ·</span> E pick up · R restart chamber · H hint</p>
+    <p id="controls">WASD move · Space jump · Left click <span class="blue">blue</span> · <span id="orange-help">Right click <span class="orange">orange</span> ·</span> E pick up · Z slow-mo · R restart chamber · H hint</p>
+    <div id="slowmo" aria-live="polite"><span id="slowmo-label">Z: slow-mo ready</span><div class="bar"><div id="slowmo-fill"></div></div></div>
   </div>
 
   <p id="subtitle" role="log" aria-live="polite" hidden><b>GLaDOS:</b> <span id="subtitle-text"></span></p>
@@ -52,6 +53,15 @@
     <button id="again-btn" class="big secondary">Test again</button>
   </section>
 
+  <pre id="devinfo" hidden></pre>
+
+  <section id="console" hidden aria-label="Developer console">
+    <div class="console-title">Developer Console <span>(` or Esc to close)</span></div>
+    <div id="console-log" role="log" aria-live="polite"></div>
+    <input id="console-input" autocomplete="off" spellcheck="false" aria-label="Console command">
+  </section>
+
+  <div id="slowmo-tint" aria-hidden="true"></div>
   <div id="fade" aria-hidden="true"></div>
 
   <script type="module" src="game.js"></script>

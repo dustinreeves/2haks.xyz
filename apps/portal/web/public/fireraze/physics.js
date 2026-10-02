@@ -36,6 +36,9 @@ export function moveBody(center, half, vel, dt, solids, ignore = new Set()) {
   return grounded;
 }
 
+// Live settings the console can change (`sv_gravity`).
+export const physicsSettings = { gravity: GRAVITY };
+
 export function applyGravity(vel, dt) {
-  vel.y = Math.max(vel.y - GRAVITY * dt, -MAX_FALL_SPEED);
+  vel.y = Math.max(vel.y - physicsSettings.gravity * dt, -MAX_FALL_SPEED);
 }

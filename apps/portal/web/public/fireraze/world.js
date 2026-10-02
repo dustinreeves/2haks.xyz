@@ -222,14 +222,7 @@ export class World {
       this.buttons.push({ pos, opens: raw.opens, top, topMat, pressed: false });
     }
 
-    for (const raw of data.cubes) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), CUBE);
-      mesh.castShadow = mesh.receiveShadow = true;
-      this.group.add(mesh);
-      const spawn = new V3(...raw.pos);
-      this.cubes.push({ spawn, center: spawn.clone(), vel: new V3(), mesh, held: false, prev: {} });
-      mesh.position.copy(spawn);
-    }
+    for (const raw of data.cubes) this.addCube(new V3(...raw.pos));
 
     // Exit lift: a glowing ring on the floor inside a glass tube.
     this.exit = box3(data.exit);
@@ -250,6 +243,17 @@ export class World {
     const lift = new THREE.PointLight(0x9ff5ff, 6, 6);
     lift.position.set(cx, e.min.y + 1.5, cz);
     this.group.add(ring, tube, lift);
+  }
+
+  /** Add a cube that respawns at `spawn`. */
+  addCube(spawn) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), CUBE);
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.position.copy(spawn);
+    this.group.add(mesh);
+    const cube = { spawn: spawn.clone(), center: spawn.clone(), vel: new V3(), mesh, held: false, prev: {} };
+    this.cubes.push(cube);
+    return cube;
   }
 
   /** Solid boxes right now (open doors don't count). Add cubes for things that can stand on them. */

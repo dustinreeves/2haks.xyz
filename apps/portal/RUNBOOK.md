@@ -122,3 +122,12 @@ sudo mkdir -p data-backups && sudo cp -a data/portal.db "data-backups/portal-$(d
 sudo rm data/portal.db data/portal.db-wal data/portal.db-shm 2>/dev/null
 docker compose start api
 ```
+
+## In-game controls added later
+
+- **Z** - slow-mo: the world runs at 1/3 speed for 6 s while you move normally; 10 s recharge. The server clock still counts real time.
+- **`** (or ~) - developer console, Source-style (`fireraze/console.js`). ConVars print/set (`sv_gravity` / `sv_gravity 300`), `;` chains commands, Tab completes, Up/Down = history.
+  - Anyone: `help`, `find`, `cvarlist`, `echo`, `clear`, `bind`, `unbind`, `kill`, `restart`, `reload`, `portals_resetall`, `maps`, `hint`, `disconnect`, `quit`, `version`, `fov_desired`, `sensitivity`, `crosshair`, `r_drawviewmodel`, `cl_showfps`, `cl_showpos`
+  - Cheats (`sv_cheats 1`): `noclip`, `god`, `map <id>`, `upgrade_portalgun`, `give weapon_portalgun`, `ent_create prop_weighted_cube`, `sv_gravity`, `host_timescale`, `mat_fullbright`, `sv_portal_placement_never_fail`
+  - Turning on `sv_cheats` during a run makes it unofficial: no server timing, no leaderboard.
+  - Left out on purpose: commands that need Half-Life 2 weapons/NPCs/maps (`impulse 101`, `npc_create`, `give weapon_crowbar`, ...).

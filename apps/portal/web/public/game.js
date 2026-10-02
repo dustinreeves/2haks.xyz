@@ -2,7 +2,8 @@
 // Test chambers come from the API (/api/levels). The API also keeps the run clock and the leaderboard.
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
 import {
-  applyGravity, castRay, CUBE_HALF, ENGINE, insideBox, moveBody, overlaps, PortalSystem, setupLighting, World,
+  applyGravity, castRay, CUBE_HALF, DevConsole, ENGINE, insideBox, moveBody, overlaps, physicsSettings, PortalSystem,
+  setupLighting, World,
 } from "./fireraze/index.js";
 
 const V3 = THREE.Vector3;
@@ -99,82 +100,91 @@ portals.onChange = updateCrosshair;
 
 // ---------- the portal gun ----------
 
-// Our own design (the "Fire Raze gun"): smooth white shell, dark finned back end, glass core
-// window on the side, light strip on top, and a three-prong emitter at the front.
-// Every glowing part takes the colour of the last portal you shot. Forward is -z.
+// Portal-gun-style model, built from our own shapes (no copied model): a big rounded white back
+// shell, a dark neck with a glowing glass tube on top, a white front collar, and three long black
+// claws around the emitter. Every glowing part takes the colour of the last portal. Forward is -z.
 const gun = new THREE.Group();
 const gunGlowMat = new THREE.MeshBasicMaterial({ color: BLUE });
 const gunGlowParts = [gunGlowMat];
 let gunGlow; // the emitter tip: beams start here
 {
-  const white = new THREE.MeshPhysicalMaterial({ color: 0xf4f5f6, roughness: 0.28, clearcoat: 0.6, clearcoatRoughness: 0.2 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x24282c, roughness: 0.45, metalness: 0.6 });
-  const grey = new THREE.MeshStandardMaterial({ color: 0x8a9096, roughness: 0.4, metalness: 0.7 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transmission: 0.6, transparent: true, opacity: 0.45 });
+  const white = new THREE.MeshPhysicalMaterial({ color: 0xf2f3f4, roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.15 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x1b1e21, roughness: 0.5, metalness: 0.4 });
+  const grey = new THREE.MeshStandardMaterial({ color: 0x6f777e, roughness: 0.35, metalness: 0.8 });
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.35 });
   const glow = () => {
     const m = new THREE.MeshBasicMaterial({ color: BLUE });
     gunGlowParts.push(m);
     return m;
   };
-  const along = (mesh) => { mesh.rotation.x = Math.PI / 2; return mesh; }; // point a lathe/cylinder along -z
+  const along = (mesh) => { mesh.rotation.x = Math.PI / 2; return mesh; }; // lathe/cylinder axis → z
+  const lathe = (pts, mat) => along(new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), 40), mat));
 
-  // Shell: a smooth, egg-shaped body spun from a side profile.
-  const profile = [[0, 0.16], [0.05, 0.155], [0.075, 0.12], [0.085, 0.05], [0.082, -0.04], [0.068, -0.12], [0.05, -0.16], [0.045, -0.165]]
-    .map(([r, z]) => new THREE.Vector2(r, z));
-  const shell = along(new THREE.Mesh(new THREE.LatheGeometry(profile, 32), white));
-  shell.scale.set(1, 1, 0.92); // a little flatter top-to-bottom
-  gun.add(shell);
+  // Back shell: big, round and white (it rests against your arm).
+  const back = lathe([[0, 0.26], [0.05, 0.255], [0.085, 0.235], [0.105, 0.19], [0.11, 0.12], [0.104, 0.05], [0.085, 0.0], [0.06, -0.02]], white);
+  back.scale.set(1, 1, 0.85);
+  gun.add(back);
 
-  // Back end: dark cap with cooling fins.
-  const cap = along(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.06, 24), dark));
-  cap.position.z = 0.17;
-  gun.add(cap);
-  for (let i = 0; i < 4; i++) {
-    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.008, 0.035), grey);
-    fin.position.set(0, -0.03 + i * 0.02, 0.19);
-    gun.add(fin);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.16), black); // underside handle
+  grip.position.set(0, -0.09, 0.13);
+  gun.add(grip);
+
+  // Neck: dark and narrow, with ribs.
+  const neck = along(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.06, 0.1, 24), black));
+  neck.position.z = -0.06;
+  gun.add(neck);
+  for (const z of [-0.03, -0.06, -0.09]) {
+    const rib = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.006, 6, 24), grey);
+    rib.position.z = z;
+    gun.add(rib);
   }
 
-  // Top spine with a glowing strip.
-  const spine = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.03, 0.22), dark);
-  spine.position.set(0, 0.078, 0.0);
-  gun.add(spine);
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.006, 0.18), glow());
-  strip.position.set(0, 0.095, 0.0);
-  gun.add(strip);
+  // Glass tube on top, with the glowing core inside, held by two brackets.
+  const tube = along(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 20), glass));
+  tube.position.set(0, 0.085, -0.02);
+  const core = along(new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.18, 12), glow()));
+  core.position.copy(tube.position);
+  gun.add(tube, core);
+  for (const z of [-0.1, 0.06]) {
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.04, 0.02), black);
+    bracket.position.set(0, 0.07, z);
+    gun.add(bracket);
+  }
 
-  // Side window: a glass tube with the glowing core inside (on the side you can see).
-  const core = along(new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.1, 12), glow()));
-  core.position.set(-0.07, 0.0, 0.02);
-  const tube = along(new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.12, 16), glass));
-  tube.position.copy(core.position);
-  gun.add(core, tube);
+  // Front collar: white, narrowing towards the emitter.
+  const collar = lathe([[0.062, -0.1], [0.075, -0.13], [0.072, -0.18], [0.058, -0.215]], white);
+  gun.add(collar);
 
-  // Front emitter: dark barrel, glowing ring and three prongs curling inwards.
-  const barrel = along(new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.055, 0.07, 24), dark));
-  barrel.position.z = -0.19;
-  gun.add(barrel);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.007, 8, 32), glow());
-  ring.position.z = -0.226;
-  gun.add(ring);
+  // Emitter: dark ring with a glowing centre.
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 10, 32), black);
+  ring.position.z = -0.218;
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.04, 24), glow());
+  lens.position.z = -0.214;
+  lens.rotation.y = Math.PI; // face forward (-z)
+  gun.add(ring, lens);
+
+  // Three long black claws: out, forward, then curling in at the tips.
   for (let i = 0; i < 3; i++) {
-    const a = (i / 3) * Math.PI * 2 + Math.PI / 2;
-    const prong = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.014, 0.08), grey);
-    base.position.z = -0.04;
-    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.035), dark);
-    tip.position.set(0, -0.012, -0.09);
-    tip.rotation.x = 0.5; // bends in towards the middle
-    prong.add(base, tip);
-    prong.position.set(Math.cos(a) * 0.05, Math.sin(a) * 0.05, -0.21);
-    prong.rotation.z = a - Math.PI / 2;
-    gun.add(prong);
+    const a = (i / 3) * Math.PI * 2 + Math.PI / 2; // one on top, two below
+    const claw = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.02, 0.1), black);
+    base.position.z = -0.05;
+    base.rotation.x = -0.22; // leans outwards
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.016, 0.07), black);
+    tip.position.set(0, 0.018, -0.125);
+    tip.rotation.x = 0.55; // curls back in
+    const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), grey);
+    knuckle.position.set(0, 0.024, -0.1);
+    claw.add(base, tip, knuckle);
+    claw.position.set(Math.cos(a) * 0.06, Math.sin(a) * 0.06, -0.19);
+    claw.rotation.z = a - Math.PI / 2;
+    gun.add(claw);
   }
 
-  gunGlow = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 12), gunGlowMat);
-  gunGlow.position.z = -0.27;
+  gunGlow = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 12), gunGlowMat);
+  gunGlow.position.z = -0.29;
   gun.add(gunGlow);
-  const tipLight = new THREE.PointLight(BLUE, 0.35, 0.8);
+  const tipLight = new THREE.PointLight(BLUE, 0.4, 0.9);
   tipLight.position.z = -0.3;
   gun.add(tipLight);
   gun.userData.tipLight = tipLight;
@@ -185,7 +195,8 @@ function setGunColor(color) {
   for (const m of gunGlowParts) m.color.setHex(color);
   gun.userData.tipLight.color.setHex(color);
 }
-gun.position.set(0.26, -0.24, -0.45);
+gun.position.set(0.26, -0.24, -0.56);
+gun.scale.setScalar(0.85);
 camera.add(gun);
 let recoil = 0;
 
@@ -342,6 +353,7 @@ function lookDir(out = new V3()) {
 function loadWorld(data, chamberNumber = 1, chamberCount = 1) {
   world.build(data, { chamberNumber, chamberCount });
   buildJimRail(data);
+  stopSlowmo();
   portals.clearAll();
   for (const f of data.fixed_portals) {
     const normal = new V3(...f.normal);
@@ -370,13 +382,20 @@ let locked = false;
 const active = () => state.mode === "playing" && (locked || DEV);
 
 window.addEventListener("keydown", (e) => {
-  if (state.mode !== "playing") return;
+  if (e.code === "Backquote" || e.key === "`" || e.key === "~") {
+    e.preventDefault();
+    con.toggle();
+    return;
+  }
+  if (con.isOpen || state.mode !== "playing") return;
   if (e.target instanceof Element && e.target.closest("input, textarea")) return;
+  if (!e.repeat) con.key(e);
   if (KEYMAP[e.code]) { held.add(KEYMAP[e.code]); e.preventDefault(); }
   if (e.code === "Space") { held.add("jump"); e.preventDefault(); }
   if (e.code === "KeyE" && !e.repeat) toggleHold();
   if (e.code === "KeyR" && !e.repeat) { say(pick(LINES.restart)); resetChamber(); }
   if (e.code === "KeyH" && !e.repeat) say(world.data.hint || "No hints here. You've got this.");
+  if (e.code === "KeyZ" && !e.repeat) startSlowmo();
 });
 window.addEventListener("keyup", (e) => {
   if (KEYMAP[e.code]) held.delete(KEYMAP[e.code]);
@@ -396,20 +415,121 @@ canvas.addEventListener("mousedown", (e) => {
 });
 document.addEventListener("pointerlockchange", () => {
   locked = document.pointerLockElement === canvas;
-  if (state.mode === "playing" && !DEV) $("pause").hidden = locked;
+  if (state.mode === "playing" && !DEV) $("pause").hidden = locked || con.isOpen;
   if (!locked) held.clear();
 });
 document.addEventListener("mousemove", (e) => {
   if (!locked || state.mode !== "playing") return;
-  player.yaw -= e.movementX * LOOK_SPEED;
-  player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * LOOK_SPEED, -1.5, 1.5);
+  const look = LOOK_SPEED * (con.get("sensitivity") / 3);
+  player.yaw -= e.movementX * look;
+  player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * look, -1.5, 1.5);
 });
 $("resume-btn").addEventListener("click", () => canvas.requestPointerLock());
+
+// ---------- developer console (press `) ----------
+// Commands and settings named after Portal's own console. Ones that only make sense with
+// Half-Life 2's weapons, NPCs or maps (impulse 101, npc_create, give weapon_crowbar...) are left out.
+
+const con = new DevConsole({ root: $("console"), log: $("console-log"), input: $("console-input") });
+const flags = { noclip: false, god: false, cheated: false, gunUpgraded: false };
+const fullbright = new THREE.AmbientLight(0xffffff, 2.5);
+fullbright.visible = false;
+scene.add(fullbright);
+
+con.onToggle = (open) => {
+  held.clear();
+  if (open && document.pointerLockElement) document.exitPointerLock();
+  if (!open && state.mode === "playing" && !DEV) canvas.requestPointerLock();
+};
+
+function markCheated() {
+  if (flags.cheated || (state.mode !== "playing" && state.mode !== "loading")) return;
+  flags.cheated = true;
+  con.print("Cheats are on: this run can't go on the leaderboard.", "err");
+}
+
+con.vars.get("sv_cheats").onChange = (v) => { if (v === 1) markCheated(); };
+con.cvar("sv_gravity", 600, {
+  help: "World gravity in Source units (600 = normal; 1 unit = 1 inch).",
+  cheat: true, min: -2000, max: 5000,
+  onChange: (v) => { physicsSettings.gravity = v * 0.0254; },
+});
+con.cvar("host_timescale", 1, { help: "Game speed for everything (1 = normal).", cheat: true, min: 0.1, max: 10 });
+con.cvar("fov_desired", 75, {
+  help: "Field of view in degrees.", min: 60, max: 110,
+  onChange: (v) => { camera.fov = v; camera.updateProjectionMatrix(); },
+});
+con.cvar("sensitivity", 3, { help: "Mouse sensitivity.", min: 0.1, max: 20 });
+con.cvar("crosshair", 1, { help: "Show the crosshair.", min: 0, max: 1, onChange: (v) => { $("crosshair").hidden = !v; } });
+con.cvar("r_drawviewmodel", 1, { help: "Show the portal gun in your hands.", min: 0, max: 1, onChange: (v) => { gun.visible = !!v; } });
+con.cvar("cl_showfps", 0, { help: "Show frames per second.", min: 0, max: 1 });
+con.cvar("cl_showpos", 0, { help: "Show your position, angle and speed.", min: 0, max: 1 });
+con.cvar("mat_fullbright", 0, {
+  help: "Light everything evenly, no shadows.", cheat: true, min: 0, max: 1,
+  onChange: (v) => { fullbright.visible = !!v; },
+});
+con.cvar("sv_portal_placement_never_fail", 0, { help: "Portals stick to any surface.", cheat: true, min: 0, max: 1 });
+
+con.command("noclip", () => {
+  flags.noclip = !flags.noclip;
+  player.vel.set(0, 0, 0);
+  con.print(`noclip ${flags.noclip ? "ON" : "OFF"}`);
+}, "Fly through walls (toggle).", { cheat: true });
+con.command("god", () => {
+  flags.god = !flags.god;
+  con.print(`godmode ${flags.god ? "ON" : "OFF"}`);
+}, "Goo and falling can't hurt you (toggle).", { cheat: true });
+con.command("kill", () => { if (state.mode === "playing") die(LINES.goo); }, "Restart the chamber the hard way.");
+con.command("restart", () => { if (state.mode === "playing") resetChamber(); }, "Restart this chamber.");
+con.command("reload", () => { if (state.mode === "playing") resetChamber(); }, "Same as restart.");
+con.command("portals_resetall", () => { portals.clearUnfixed(); }, "Remove the portals you shot.");
+con.command("upgrade_portalgun", () => {
+  flags.gunUpgraded = true;
+  $("orange-help").hidden = false;
+  con.print("Portal gun upgraded: orange portals unlocked.");
+}, "Unlock orange portals in every chamber.", { cheat: true });
+con.command("give", (args) => {
+  if (args[0] === "weapon_portalgun") con.exec("upgrade_portalgun");
+  else con.print(`give: "${args[0] || ""}" isn't in Portal Fan Lab. Try "give weapon_portalgun".`, "err");
+}, "give weapon_portalgun", { cheat: true });
+con.command("ent_create", (args) => {
+  if (args[0] !== "prop_weighted_cube") {
+    con.print("ent_create: only prop_weighted_cube is available here.", "err");
+    return;
+  }
+  if (!world.data) return;
+  world.addCube(eyePos().addScaledVector(lookDir(), 1.5));
+}, "ent_create prop_weighted_cube: drop a cube in front of you.", { cheat: true });
+con.command("maps", () => {
+  api("/levels").then(({ levels }) => levels.forEach((lv) => con.print(`  ${lv.id}  (${lv.name})`)));
+}, "List the test chambers.");
+con.command("map", (args) => {
+  const i = state.levels.indexOf(args[0]);
+  if (state.mode !== "playing") con.print("Start testing first, then use map.", "err");
+  else if (i < 0) con.print(`map: no chamber "${args[0] || ""}". Type "maps" to see them.`, "err");
+  else {
+    markCheated();
+    loadChamber(i);
+  }
+}, "map <chamber id>: jump to a chamber.", { cheat: true });
+con.command("hint", () => { if (world.data) say(world.data.hint || "No hints here."); }, "Ask for this chamber's hint.");
+con.command("disconnect", () => {
+  if (state.mode === "playing" || state.mode === "ended") {
+    state.mode = "menu";
+    if (document.pointerLockElement) document.exitPointerLock();
+    ["hud", "end", "pause"].forEach((id) => { $(id).hidden = true; });
+    $("start").hidden = false;
+    con.close();
+  }
+}, "Leave to the main menu.");
+con.command("quit", () => con.exec("disconnect"), "Leave to the main menu.");
+con.command("version", () => con.print(`${ENGINE.name} ${ENGINE.version} | Portal Fan Lab | Three.js r${THREE.REVISION}`), "Engine version.");
+con.print(`${ENGINE.name} ${ENGINE.version} console. Type "help" to start.`);
 
 // ---------- shooting and carrying ----------
 
 function shoot(color) {
-  if (color === "orange" && world.data.gun !== "both") {
+  if (color === "orange" && world.data.gun !== "both" && !flags.gunUpgraded) {
     sayOnce(LINES.orangeLocked);
     return false;
   }
@@ -420,7 +540,9 @@ function shoot(color) {
   const end = hit ? origin.clone().addScaledVector(dir, hit.t) : origin.clone().addScaledVector(dir, 30);
   fireBeam(end, p.color);
   if (!hit) return false;
-  const spot = portals.fit(hit.box, end, hit.normal, hit.axis, dir);
+  const anySurface = con.cheats && con.get("sv_portal_placement_never_fail") === 1;
+  const box = anySurface ? { ...hit.box, type: "white", door: false } : hit.box;
+  const spot = portals.fit(box, end, hit.normal, hit.axis, dir);
   if (spot.error) {
     sayOnce(LINES[spot.error]);
     return false;
@@ -436,7 +558,7 @@ function updateCrosshair() {
   document.querySelector("#crosshair .l").classList.toggle("on", portals.blue.placed);
   const r = document.querySelector("#crosshair .r");
   r.classList.toggle("on", portals.orange.placed);
-  r.classList.toggle("off", !!world.data && world.data.gun !== "both" && !portals.orange.placed);
+  r.classList.toggle("off", !!world.data && world.data.gun !== "both" && !flags.gunUpgraded && !portals.orange.placed);
 }
 
 function toggleHold() {
@@ -472,7 +594,24 @@ function toggleHold() {
 
 const _wish = new V3();
 
+// noclip: fly where you look, straight through walls. No gravity, no hazards.
+function noclipMove(dt) {
+  const dir = lookDir();
+  const right = new V3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+  const move = new V3();
+  if (held.has("forward")) move.add(dir);
+  if (held.has("back")) move.sub(dir);
+  if (held.has("right")) move.add(right);
+  if (held.has("left")) move.sub(right);
+  if (held.has("jump")) move.y += 1;
+  if (move.lengthSq() > 0) player.center.addScaledVector(move.normalize(), WALK_SPEED * 2 * dt);
+  player.vel.set(0, 0, 0);
+  player.prev = {};
+  if (insideBox(player.center, world.exit)) chamberComplete();
+}
+
 function updatePlayer(dt) {
+  if (flags.noclip) return noclipMove(dt);
   const forward = new V3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new V3(-forward.z, 0, forward.x);
   _wish.set(0, 0, 0);
@@ -515,7 +654,7 @@ function updatePlayer(dt) {
 
   // Hazards and the exit.
   const c = player.center;
-  if (world.goo.some((g) => insideBox(c, g))) return die(LINES.goo);
+  if (!flags.god && world.goo.some((g) => insideBox(c, g))) return die(LINES.goo);
   if (c.y < world.data.room.min[1] - 20) return die(LINES.fall);
   if (world.fizzlers.some((f) => overlaps(c, PLAYER_HALF, f))) {
     if (portals.clearUnfixed()) sayOnce(LINES.fizzle);
@@ -617,10 +756,13 @@ async function chamberComplete() {
   held.clear();
   jimReact("happy", 2);
   try {
-    const res = await api(`/runs/${state.runId}/complete`, {
-      method: "POST",
-      body: JSON.stringify({ level: state.levels[state.index] }),
-    });
+    // Cheated runs are timed here only; the server's official clock skips them.
+    const res = flags.cheated
+      ? { finished: state.index + 1 >= state.levels.length, total_seconds: (performance.now() - state.startedAt) / 1000 }
+      : await api(`/runs/${state.runId}/complete`, {
+        method: "POST",
+        body: JSON.stringify({ level: state.levels[state.index] }),
+      });
     state.totalSeconds = res.total_seconds;
     if (res.finished) {
       say(pick(LINES.end));
@@ -649,6 +791,7 @@ async function startRun() {
     state.runId = run.run_id;
     state.levels = run.levels;
     state.startedAt = performance.now();
+    Object.assign(flags, { noclip: false, god: false, gunUpgraded: false, cheated: con.cheats });
     $("start").hidden = true;
     $("end").hidden = true;
     $("hud").hidden = false;
@@ -669,15 +812,18 @@ function formatTime(s) {
 
 function endRun() {
   state.mode = "ended";
+  stopSlowmo();
   if (document.pointerLockElement) document.exitPointerLock();
   $("hud").hidden = true;
   $("pause").hidden = true;
   $("final-time").textContent = formatTime(state.totalSeconds);
-  $("final-detail").textContent = `You finished all ${state.levels.length} test chambers. Jim is very proud. He didn't say so.`;
-  $("name-form").hidden = false;
+  $("final-detail").textContent = flags.cheated
+    ? "You finished with cheats on, so this run can't go on the leaderboard. Jim saw everything."
+    : `You finished all ${state.levels.length} test chambers. Jim is very proud. He didn't say so.`;
+  $("name-form").hidden = flags.cheated;
   $("name-error").textContent = "";
   $("end").hidden = false;
-  $("name").focus();
+  if (!flags.cheated) $("name").focus();
 }
 
 $("name-form").addEventListener("submit", async (e) => {
@@ -745,24 +891,87 @@ resize();
 
 // ---------- main loop ----------
 
+// Slow-mo (Z): the world runs at SLOW_SCALE speed for SLOW_SECONDS while you move normally.
+const SLOW_SCALE = 1 / 3;
+const SLOW_SECONDS = 6;
+const SLOW_RECHARGE = 10;
+const slowmo = { left: 0, recharge: 0 };
+let worldTime = 0;
+
+function startSlowmo() {
+  if (slowmo.left > 0 || slowmo.recharge > 0) return;
+  slowmo.left = SLOW_SECONDS;
+}
+
+function stopSlowmo() {
+  slowmo.left = 0;
+  slowmo.recharge = 0;
+  updateSlowmoHud();
+}
+
+function updateSlowmo(dt) {
+  if (slowmo.left > 0) {
+    slowmo.left = Math.max(0, slowmo.left - dt);
+    if (slowmo.left === 0) slowmo.recharge = SLOW_RECHARGE;
+  } else if (slowmo.recharge > 0) {
+    slowmo.recharge = Math.max(0, slowmo.recharge - dt);
+  }
+  updateSlowmoHud();
+  return slowmo.left > 0 ? SLOW_SCALE : 1;
+}
+
+function updateSlowmoHud() {
+  const on = slowmo.left > 0;
+  document.body.classList.toggle("slowmo", on);
+  const fill = on ? slowmo.left / SLOW_SECONDS : 1 - slowmo.recharge / SLOW_RECHARGE;
+  $("slowmo-fill").style.transform = `scaleX(${fill})`;
+  $("slowmo").classList.toggle("charging", !on && slowmo.recharge > 0);
+  $("slowmo-label").textContent = on ? "Slow-mo" : slowmo.recharge > 0 ? "Recharging" : "Z: slow-mo ready";
+}
+
 const clock = new THREE.Clock();
-function frame(dt, t) {
+let fps = 60;
+
+function updateDevInfo() {
+  const lines = [];
+  if (con.get("cl_showfps")) lines.push(`fps: ${Math.round(fps)}`);
+  if (con.get("cl_showpos")) {
+    const e = eyePos();
+    const deg = (r) => THREE.MathUtils.radToDeg(r).toFixed(1);
+    lines.push(`pos: ${e.x.toFixed(2)} ${e.y.toFixed(2)} ${e.z.toFixed(2)}`);
+    lines.push(`ang: ${deg(-player.pitch)} ${deg(player.yaw)} 0`);
+    lines.push(`vel: ${player.vel.length().toFixed(2)} m/s`);
+  }
+  if (flags.noclip) lines.push("noclip");
+  if (flags.god) lines.push("god");
+  $("devinfo").textContent = lines.join("\n");
+  $("devinfo").hidden = !lines.length;
+}
+
+function frame(realDt, t) {
+  const dt = realDt * con.get("host_timescale");
+  fps = fps * 0.95 + (1 / Math.max(realDt, 1e-3)) * 0.05;
+  updateDevInfo();
+  // You move at real speed; everything else uses worldDt.
+  const scale = state.mode === "playing" ? updateSlowmo(dt) : 1;
+  const worldDt = dt * scale;
+  worldTime += worldDt;
   if (world.data) {
     if (active()) {
       updatePlayer(dt);
       if (state.mode === "playing") {
         updateHeldCube(dt);
-        world.updateCubes(dt, portals, (c, why) => sayOnce(why === "goo" ? LINES.cubeGoo : LINES.cubeFizzle));
+        world.updateCubes(worldDt, portals, (c, why) => sayOnce(why === "goo" ? LINES.cubeGoo : LINES.cubeFizzle));
       }
     }
-    if (state.mode === "playing") world.updateButtonsAndDoors(dt, [player]);
+    if (state.mode === "playing") world.updateButtonsAndDoors(worldDt, [player]);
     for (const c of world.cubes) c.mesh.position.copy(c.center);
-    updateJim(dt, t);
+    updateJim(worldDt, worldTime);
   }
   if (state.mode === "menu") player.yaw = Math.sin(t * 0.15) * 0.6;
 
-  world.update(t);
-  portals.update(t);
+  world.update(worldTime);
+  portals.update(worldTime);
 
   if (beamLife > 0) {
     beamLife -= dt;
@@ -770,7 +979,7 @@ function frame(dt, t) {
     if (beamLife <= 0) beam.visible = false;
   }
   recoil = Math.max(0, recoil - dt * 6);
-  gun.position.z = -0.45 + recoil * 0.07;
+  gun.position.z = -0.56 + recoil * 0.07;
   gun.rotation.x = recoil * 0.15;
   if (!reducedMotion) {
     // Breathing sway, plus a bob while walking on the ground.
@@ -806,7 +1015,7 @@ if (DEV) {
     }
     return { center: player.center.clone(), vel: player.vel.clone(), mode: state.mode };
   };
-  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step };
+  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step, slowmo, startSlowmo, con, gun };
   console.info(`${ENGINE.name} ${ENGINE.version} developer mode`);
 }
 

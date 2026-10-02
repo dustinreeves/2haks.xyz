@@ -106,3 +106,44 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 @media (prefers-reduced-motion: reduce) {
   #fade { transition: none; }
 }
+
+/* Slow-mo (Z) */
+#slowmo {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  width: 220px; text-align: center; color: #f4f6f8; font-size: 12px;
+  letter-spacing: 0.12em; text-transform: uppercase; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+#slowmo .bar { height: 6px; margin-top: 4px; border-radius: 3px; background: rgba(0, 0, 0, 0.45); overflow: hidden; }
+#slowmo-fill { height: 100%; background: #7fd3ff; transform-origin: left; }
+#slowmo.charging #slowmo-fill { background: #8a9096; }
+#slowmo-tint {
+  position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  background: radial-gradient(ellipse at center, rgba(90, 170, 255, 0.08) 40%, rgba(40, 90, 180, 0.45) 100%);
+}
+body.slowmo #slowmo-tint { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #slowmo-tint { transition: none; } }
+
+/* Developer console (`) */
+#console {
+  position: fixed; top: 8%; left: 50%; transform: translateX(-50%); z-index: 20;
+  width: min(760px, calc(100% - 32px)); height: min(440px, 70%);
+  display: flex; flex-direction: column;
+  background: rgba(38, 40, 36, 0.94); border: 1px solid #5c5f57; border-radius: 3px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  font: 13px/1.35 ui-monospace, "Cascadia Mono", Consolas, monospace; color: #d8dcc8;
+}
+#console[hidden] { display: none; }
+.console-title { padding: 6px 10px; background: #4a4c45; color: #f0f2e6; font-weight: 600; }
+.console-title span { font-weight: 400; color: #b5b8aa; }
+#console-log { flex: 1; overflow-y: auto; padding: 8px 10px; white-space: pre-wrap; }
+#console-log .cmd { color: #f0f2e6; }
+#console-log .err { color: #ff9a7a; }
+#console-input {
+  margin: 0; border: 0; border-top: 1px solid #5c5f57; border-radius: 0;
+  background: #2b2d28; color: #f0f2e6; font: inherit; padding: 8px 10px;
+}
+#devinfo {
+  position: fixed; top: 64px; right: 16px; margin: 0; padding: 6px 10px; z-index: 5;
+  background: rgba(0, 0, 0, 0.55); color: #e8ffe0; border-radius: 3px; pointer-events: none;
+  font: 12px/1.4 ui-monospace, Consolas, monospace;
+}
