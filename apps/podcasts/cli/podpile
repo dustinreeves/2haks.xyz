@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""podpile: the biggest podcasts from the terminal.
+
+  podpile top [--genre comedy] [-n 20]   today's top shows
+  podpile genres                         genre ids for --genre
+  podpile search WORDS                   find a show
+  podpile show ID [-n 10]                a show and its newest episodes
+  podpile play ID [N]                    print the audio link of episode N (1 = newest), e.g. | mpv -
+
+Needs only Python 3. Set PODPILE_API to use another server.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import textwrap
+import urllib.error
+import urllib.parse
+import urllib.request
+
+API = os.environ.get("PODPILE_API", "https://podcasts.2haks.xyz").rstrip("/")
+
+
+def get(path: str):
+    req = urllib.request.Request(f"{API}/api{path}", headers={"User-Agent": "podpile-cli"})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as res:
+            return json.load(res)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.load(e).get("detail", e.reason)
+        except ValueError:
+            detail = e.reason
+        sys.exit(f"error: {detail}")
+    except urllib.error.URLError as e:
+        sys.exit(f"error: can't reach {API} ({e.reason})")
+
+
+def mins(sec) -> str:
+    if not sec:
+        return ""
+    m = round(sec / 60)
+    return f"{m // 60}h{m % 60:02d}" if m >= 60 else f"{m}m"
+
+
+def shows_table(shows, ranked=False):
+    for i, s in enumerate(shows, 1):
+        e = " [E]" if s.get("explicit") else ""
+        lead = f"{s.get('rank', i):>3}. " if ranked else ""
+        print(f"{lead}{s['id']:>11}  {s['name']}{e}  ({s['author']})")
+
+
+def cmd_top(args):
+    data = get("/top?" + urllib.parse.urlencode({"genre": args.genre}))
+    shows_table(data["shows"][: args.n], ranked=True)
+
+
+def cmd_genres(_args):
+    for g in get("/genres")["genres"]:
+        print(f"{g['id']:<12} {g['name']}")
+
+
+def cmd_search(args):
+    shows = get("/search?" + urllib.parse.urlencode({"q": " ".join(args.words)}))["shows"]
+    if not shows:
+        print("No shows found.")
+    shows_table(shows)
+
+
+def cmd_show(args):
+    data = get(f"/podcasts/{urllib.parse.quote(args.id)}")
+    p = data["podcast"]
+    print(f"{p['name']}  by {p['author']}")
+    print(f"  {p['genre']} · {p['episode_count']} episodes · {API}/#/p/{p['id']}")
+    if p["description"]:
+        print(textwrap.indent(textwrap.fill(p["description"][:400], 88), "  "))
+    print()
+    for i, e in enumerate(data["episodes"][: args.n], 1):
+        print(f"{i:>3}. {(e['published'] or '')[:10]}  {mins(e['duration']):>5}  {e['title']}")
+
+
+def cmd_play(args):
+    eps = get(f"/podcasts/{urllib.parse.quote(args.id)}")["episodes"]
+    if not 1 <= args.n <= len(eps):
+        sys.exit(f"error: pick an episode from 1 to {len(eps)}")
+    print(eps[args.n - 1]["audio"])
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="podpile", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("top", help="today's top shows")
+    p.add_argument("--genre", default="all")
+    p.add_argument("-n", type=int, default=25)
+    p.set_defaults(fn=cmd_top)
+    sub.add_parser("genres", help="genre ids").set_defaults(fn=cmd_genres)
+    p = sub.add_parser("search", help="find a show")
+    p.add_argument("words", nargs="+")
+    p.set_defaults(fn=cmd_search)
+    p = sub.add_parser("show", help="a show and its newest episodes")
+    p.add_argument("id")
+    p.add_argument("-n", type=int, default=10)
+    p.set_defaults(fn=cmd_show)
+    p = sub.add_parser("play", help="print an episode's audio link")
+    p.add_argument("id")
+    p.add_argument("n", type=int, nargs="?", default=1)
+    p.set_defaults(fn=cmd_play)
+    args = ap.parse_args()
+    args.fn(args)
+
+
+if __name__ == "__main__":
+    main()

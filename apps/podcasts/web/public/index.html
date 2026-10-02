@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pod Pile</title>
+  <meta name="description" content="The biggest podcasts, streamed straight from the people who make them.">
+  <meta name="theme-color" content="#16131d">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a class="logo" href="#/" aria-label="Pod Pile home">
+      <img src="favicon.svg" alt="" width="30" height="30">
+      <span>Pod&nbsp;Pile</span>
+    </a>
+    <form class="search" id="search" role="search">
+      <input id="search-q" type="search" placeholder="Search every podcast…" aria-label="Search podcasts" maxlength="80" autocomplete="off">
+    </form>
+    <nav class="nav">
+      <a href="#/queue" id="nav-queue">Up next <span class="count" id="queue-count" hidden></span></a>
+    </nav>
+  </header>
+
+  <main id="view" tabindex="-1"></main>
+
+  <footer class="foot">
+    <p>Charts and show listings from Apple Podcasts. Every episode streams straight from the
+      creator's own feed: nothing is copied or stored here. Part of <a href="https://2haks.xyz">2haks.xyz</a>.</p>
+  </footer>
+
+  <div class="player" id="player" hidden>
+    <div class="player-progress">
+      <input type="range" id="p-seek" min="0" max="1000" value="0" step="1" aria-label="Seek">
+    </div>
+    <div class="player-row">
+      <a class="player-info" id="p-info" href="#/">
+        <img id="p-art" alt="" referrerpolicy="no-referrer">
+        <span class="player-text">
+          <span class="player-title" id="p-title"></span>
+          <span class="player-show" id="p-show"></span>
+        </span>
+      </a>
+      <div class="player-controls">
+        <button class="ctl" id="p-back" type="button" title="Back 15 seconds (←)" aria-label="Back 15 seconds">
+          <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/><text x="12" y="16.2" text-anchor="middle">15</text></svg>
+        </button>
+        <button class="ctl big" id="p-play" type="button" aria-label="Play">
+          <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7z"/></svg>
+          <svg viewBox="0 0 24 24" class="i-pause"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+        <button class="ctl" id="p-fwd" type="button" title="Forward 30 seconds (→)" aria-label="Forward 30 seconds">
+          <svg viewBox="0 0 24 24"><path d="M12 5V2l5 4-5 4V7a6 6 0 1 0 6 6h2a8 8 0 1 1-8-8z"/><text x="12" y="16.2" text-anchor="middle">30</text></svg>
+        </button>
+      </div>
+      <div class="player-extra">
+        <span class="time"><span id="p-pos">0:00</span> / <span id="p-dur">0:00</span></span>
+        <button class="pill" id="p-speed" type="button" title="Playback speed">1×</button>
+        <button class="pill" id="p-sleep" type="button" title="Sleep timer">Sleep</button>
+        <button class="pill" id="p-next" type="button" title="Next in queue" hidden>Next ⏭</button>
+      </div>
+    </div>
+    <audio id="audio" preload="none"></audio>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

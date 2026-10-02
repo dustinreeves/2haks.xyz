@@ -128,6 +128,25 @@
           "curl -s https://chemoquiz.2haks.xyz/questions.js | grep -c \"q:\""
         ]
       }
+    },
+    {
+      "slug": "podcasts",
+      "name": "Pod Pile",
+      "launch_date": "2026-10-02",
+      "url": "https://podcasts.2haks.xyz",
+      "description": "A podcast player for the biggest shows: Apple's top 100 (overall or by genre), search for anything else, follow shows, queue episodes and pick up where you left off. Every episode streams straight from the creator's own feed, so nothing is copied here.",
+      "author": "Dustin",
+      "examples": {
+        "api": [
+          "curl https://podcasts.2haks.xyz/api/top?genre=comedy",
+          "curl https://podcasts.2haks.xyz/api/podcasts/1200361736"
+        ],
+        "cli": [
+          "podpile top -n 10",
+          "podpile search history",
+          "podpile show 1200361736"
+        ]
+      }
     }
   ]
 }
