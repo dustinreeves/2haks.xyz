@@ -99,28 +99,92 @@ portals.onChange = updateCrosshair;
 
 // ---------- the portal gun ----------
 
+// Our own design (the "Fire Raze gun"): smooth white shell, dark finned back end, glass core
+// window on the side, light strip on top, and a three-prong emitter at the front.
+// Every glowing part takes the colour of the last portal you shot. Forward is -z.
 const gun = new THREE.Group();
-{
-  const white = new THREE.MeshStandardMaterial({ color: 0xf3f4f5, roughness: 0.35 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.5, metalness: 0.5 });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.26, 6, 16), white);
-  body.rotation.x = Math.PI / 2;
-  gun.add(body);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.065, 0.13, 16), dark);
-  barrel.rotation.x = Math.PI / 2;
-  barrel.position.z = -0.21;
-  gun.add(barrel);
-  for (const side of [-1, 1]) {
-    const claw = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.15), dark);
-    claw.position.set(side * 0.055, 0.03, -0.25);
-    claw.rotation.y = side * 0.25;
-    gun.add(claw);
-  }
-}
 const gunGlowMat = new THREE.MeshBasicMaterial({ color: BLUE });
-const gunGlow = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 12), gunGlowMat);
-gunGlow.position.z = -0.28;
-gun.add(gunGlow);
+const gunGlowParts = [gunGlowMat];
+let gunGlow; // the emitter tip: beams start here
+{
+  const white = new THREE.MeshPhysicalMaterial({ color: 0xf4f5f6, roughness: 0.28, clearcoat: 0.6, clearcoatRoughness: 0.2 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x24282c, roughness: 0.45, metalness: 0.6 });
+  const grey = new THREE.MeshStandardMaterial({ color: 0x8a9096, roughness: 0.4, metalness: 0.7 });
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transmission: 0.6, transparent: true, opacity: 0.45 });
+  const glow = () => {
+    const m = new THREE.MeshBasicMaterial({ color: BLUE });
+    gunGlowParts.push(m);
+    return m;
+  };
+  const along = (mesh) => { mesh.rotation.x = Math.PI / 2; return mesh; }; // point a lathe/cylinder along -z
+
+  // Shell: a smooth, egg-shaped body spun from a side profile.
+  const profile = [[0, 0.16], [0.05, 0.155], [0.075, 0.12], [0.085, 0.05], [0.082, -0.04], [0.068, -0.12], [0.05, -0.16], [0.045, -0.165]]
+    .map(([r, z]) => new THREE.Vector2(r, z));
+  const shell = along(new THREE.Mesh(new THREE.LatheGeometry(profile, 32), white));
+  shell.scale.set(1, 1, 0.92); // a little flatter top-to-bottom
+  gun.add(shell);
+
+  // Back end: dark cap with cooling fins.
+  const cap = along(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.06, 24), dark));
+  cap.position.z = 0.17;
+  gun.add(cap);
+  for (let i = 0; i < 4; i++) {
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.008, 0.035), grey);
+    fin.position.set(0, -0.03 + i * 0.02, 0.19);
+    gun.add(fin);
+  }
+
+  // Top spine with a glowing strip.
+  const spine = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.03, 0.22), dark);
+  spine.position.set(0, 0.078, 0.0);
+  gun.add(spine);
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.006, 0.18), glow());
+  strip.position.set(0, 0.095, 0.0);
+  gun.add(strip);
+
+  // Side window: a glass tube with the glowing core inside (on the side you can see).
+  const core = along(new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.1, 12), glow()));
+  core.position.set(-0.07, 0.0, 0.02);
+  const tube = along(new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.12, 16), glass));
+  tube.position.copy(core.position);
+  gun.add(core, tube);
+
+  // Front emitter: dark barrel, glowing ring and three prongs curling inwards.
+  const barrel = along(new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.055, 0.07, 24), dark));
+  barrel.position.z = -0.19;
+  gun.add(barrel);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.007, 8, 32), glow());
+  ring.position.z = -0.226;
+  gun.add(ring);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + Math.PI / 2;
+    const prong = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.014, 0.08), grey);
+    base.position.z = -0.04;
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.035), dark);
+    tip.position.set(0, -0.012, -0.09);
+    tip.rotation.x = 0.5; // bends in towards the middle
+    prong.add(base, tip);
+    prong.position.set(Math.cos(a) * 0.05, Math.sin(a) * 0.05, -0.21);
+    prong.rotation.z = a - Math.PI / 2;
+    gun.add(prong);
+  }
+
+  gunGlow = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 12), gunGlowMat);
+  gunGlow.position.z = -0.27;
+  gun.add(gunGlow);
+  const tipLight = new THREE.PointLight(BLUE, 0.35, 0.8);
+  tipLight.position.z = -0.3;
+  gun.add(tipLight);
+  gun.userData.tipLight = tipLight;
+  gun.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
+}
+
+function setGunColor(color) {
+  for (const m of gunGlowParts) m.color.setHex(color);
+  gun.userData.tipLight.color.setHex(color);
+}
 gun.position.set(0.26, -0.24, -0.45);
 camera.add(gun);
 let recoil = 0;
@@ -133,7 +197,7 @@ let beamLife = 0;
 
 function fireBeam(to, color) {
   recoil = 1;
-  gunGlowMat.color.setHex(color);
+  setGunColor(color);
   beamMat.color.setHex(color);
   const from = gunGlow.getWorldPosition(new V3());
   const dir = new V3().subVectors(to, from);
@@ -623,7 +687,12 @@ function frame(dt, t) {
   recoil = Math.max(0, recoil - dt * 6);
   gun.position.z = -0.45 + recoil * 0.07;
   gun.rotation.x = recoil * 0.15;
-  if (!reducedMotion) gun.position.y = -0.24 + Math.sin(t * 2) * 0.005;
+  if (!reducedMotion) {
+    // Breathing sway, plus a bob while walking on the ground.
+    const walk = player.onGround ? Math.min(1, Math.hypot(player.vel.x, player.vel.z) / WALK_SPEED) : 0;
+    gun.position.y = -0.24 + Math.sin(t * 2) * 0.005 - Math.abs(Math.sin(t * 9)) * 0.012 * walk;
+    gun.position.x = 0.26 + Math.sin(t * 4.5) * 0.008 * walk;
+  }
 
   if (state.mode === "playing" || state.mode === "loading") {
     $("timer").textContent = formatTime((performance.now() - state.startedAt) / 1000);

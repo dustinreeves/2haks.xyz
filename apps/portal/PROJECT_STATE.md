@@ -4,7 +4,7 @@
 
 ## Progress
 - [x] **Fire Raze** engine (`web/public/fireraze/`): see-through portals with momentum, box physics, chamber builder, realistic lighting (ACES tone mapping, image-based light, soft shadows), code-drawn textures (white tile = Tripp's drawing)
-- [x] Game: portal gun (left = blue, right = orange), pick up cubes (E), buttons and doors, goo, fizzlers, exit lift, GLaDOS subtitles (our own lines, no Valve audio/text), Jim the silent core, observation windows, chamber signs, speedrun timer
+- [x] Game: our own Fire Raze gun model (glowing parts follow the last portal colour, walk bob); portal gun controls (left = blue, right = orange), pick up cubes (E), buttons and doors, goo, fizzlers, exit lift, GLaDOS subtitles (our own lines, no Valve audio/text), Jim the silent core, observation windows, chamber signs, speedrun timer
 - [x] 5 chambers: Through the Wall, Cube and Button, Goo Pit, Fling, Fizzler
 - [x] API: levels, server-timed runs, fastest-time leaderboard (FastAPI + SQLite); 20 tests
 - [x] CLI `portalfan` (levels / show / leaderboard / validate)
