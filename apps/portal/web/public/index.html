@@ -6,6 +6,10 @@
   <title>Portal Fan Lab</title>
   <meta name="description" content="An unofficial Portal fan game: solve test chambers with a portal gun.">
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#1d2126">
 </head>
 <body>
   <canvas id="scene" aria-label="3D test chamber"></canvas>
@@ -33,6 +37,8 @@
     <p class="small">Your companion is <strong>Jim</strong>, a very small core. Jim does not talk.</p>
     <p id="touch-note" class="error" hidden>This game needs a keyboard and mouse. Try it on a computer!</p>
     <button id="start-btn" class="big">Begin testing</button>
+    <button id="install-btn" class="big secondary" hidden>Install the game</button>
+    <p id="pad-note" class="small" hidden>🎮 Controller connected: press ✕ to start.</p>
     <p id="start-error" class="error" role="alert"></p>
     <h2>Fastest test subjects</h2>
     <ol id="leaderboard" class="leaderboard"><li>Loading…</li></ol>

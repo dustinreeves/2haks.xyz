@@ -11,3 +11,4 @@ export { PORTAL_H, PORTAL_W, PortalSystem } from "./portals.js";
 export { canvasTexture, TEXTURES, tiledBox } from "./textures.js";
 export { CUBE_HALF, World } from "./world.js";
 export { LAYERS, makeTestSubject } from "./character.js";
+export { BUTTON, GamepadInput } from "./gamepad.js";

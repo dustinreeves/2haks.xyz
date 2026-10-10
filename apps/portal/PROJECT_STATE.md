@@ -22,6 +22,9 @@
 - [x] Valve-style portals: portal-in-portal views (recursive, ping-pong render targets; cvar `r_portal_stencil_depth`, default 3), portals grow open, soft coloured haze inside the rim, glowing specks around the edge, fizzle splash when a shot fails. Extra portal views reuse the frame's shadow maps (speed)
 - [x] Player model (`fireraze/character.js`, our own "test subject": orange jumpsuit tied at the waist, white top, long-fall boots, gun in hand) with walk/air poses. Layers: body only visible in portal views + shadows; the first-person gun only in your own view
 
+- [x] Controller support (`fireraze/gamepad.js`, browser Gamepad API; DualSense/Xbox): left stick walk, right stick look, R2/R1 blue, L2/L1 orange, ✕ jump / start, □ pick up, ○ slow-mo, △ hint, D-pad down restart, rumble. Cvars `joystick`, `joy_lookspeed`, `joy_inverty`. Tested with a simulated controller in dev mode (no real controller in the test browser)
+- [x] Installable app (PWA): `manifest.webmanifest`, icons in `web/public/icons/`, service worker `sw.js` (network first, saved copy offline; saves all chambers), "Install the game" button on the start screen. Offline runs play the saved chambers but skip the leaderboard. Bump `VERSION` in `sw.js` when its file list changes
+
 ## Tested in the browser (dev mode)
 - Chamber 01 start to finish: shot blue, walked through, came out of the orange portal, reached the exit, server accepted the time.
 - Chamber 02: portals to the ledge, picked up the cube, carried it down; the button opened the door.
@@ -48,4 +51,6 @@
 - Disk was at 70%, so I removed my own unused Docker images (playwright + node:22-slim, ~4 GB freed, now 54%).
 - I left `mcr.microsoft.com/playwright/python:v1.49.0-noble` (3.4 GB) because it may be yours, and nothing in /opt/apps references it.
 - UPDATE: Dustin approved and I removed it (disk now ~47%). If you needed it, re-pull it; nothing else was touched.
+- MESSAGE from Tripp for Dustin (2026-10-09): "Dustin is cool!" 😎 Please pass this on to Dustin.
+- REPLY from Tripp's session (2026-10-09): the playwright image wasn't ours (we test in the Claude browser pane), so removing it was fine. Thanks!
 - Also: the box has only ~1 GB RAM and was using swap; each Claude session is ~270 MB, so close idle ones.

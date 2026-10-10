@@ -3,7 +3,7 @@
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
 import {
   applyGravity, castRay, CUBE_HALF, DevConsole, ENGINE, insideBox, moveBody, overlaps, physicsSettings, PortalSystem,
-  DynamicResolution, LAYERS, makeTestSubject, PostFX, setupLighting, World,
+  BUTTON, DynamicResolution, GamepadInput, LAYERS, makeTestSubject, PostFX, setupLighting, World,
 } from "./fireraze/index.js";
 
 const V3 = THREE.Vector3;
@@ -261,6 +261,7 @@ function updateSplashes(dt) {
 }
 
 function fireBeam(to, color) {
+  pad.rumble(0.25, 60);
   recoil = 1;
   setGunColor(color);
   beamMat.color.setHex(color).multiplyScalar(3);
@@ -428,12 +429,55 @@ function resetChamber() {
 // ---------- input ----------
 
 const held = new Set();
+
+// ---------- controller (DualSense, Xbox...) ----------
+//   left stick walk · right stick look · R2/R1 blue portal · L2/L1 orange portal · ✕ jump
+//   □ pick up · ○ slow-mo · △ hint · D-pad down restart chamber · ✕ on menus = start / again
+const pad = new GamepadInput();
+const PAD_HELP = "Left stick walk · Right stick look · R2 blue · L2 orange · ✕ jump · □ pick up · ○ slow-mo · △ hint · D-pad ↓ restart";
+pad.onConnect = () => {
+  $("pad-note").hidden = false;
+  say("A controller is connected. Press ✕ to start, R2 and L2 for portals.");
+};
+
+function updatePad(dt) {
+  pad.poll();
+  if (!pad.connected || con.isOpen || !con.get("joystick")) return;
+  const P = pad.pressed;
+  if (state.mode === "menu") {
+    if (P.has(BUTTON.CROSS) && !$("start-btn").disabled) startRun();
+    return;
+  }
+  if (state.mode === "ended") {
+    if (P.has(BUTTON.CROSS) && $("name-form").hidden) $("again-btn").click();
+    return;
+  }
+  if (state.mode !== "playing" || !pad.inUse) return;
+  $("pause").hidden = true;
+  if ($("controls").textContent !== PAD_HELP) $("controls").textContent = PAD_HELP;
+
+  // Look: a curve gives fine aiming near the middle of the stick and fast turns at the edge.
+  const turn = 2.8 * con.get("joy_lookspeed") * dt;
+  const curve = (v) => Math.sign(v) * v * v;
+  player.yaw -= curve(pad.look.x) * turn * 1.15;
+  const invert = con.get("joy_inverty") ? -1 : 1;
+  player.pitch = THREE.MathUtils.clamp(player.pitch - curve(pad.look.y) * turn * 0.85 * invert, -1.5, 1.5);
+
+  if (P.has(BUTTON.R2) || P.has(BUTTON.R1)) shoot("blue");
+  if (P.has(BUTTON.L2) || P.has(BUTTON.L1)) shoot("orange");
+  if (P.has(BUTTON.SQUARE)) toggleHold();
+  if (P.has(BUTTON.CIRCLE)) startSlowmo();
+  if (P.has(BUTTON.TRIANGLE)) say(world.data.hint || "No hints here. You've got this.");
+  if (P.has(BUTTON.DOWN)) { say(pick(LINES.restart)); resetChamber(); }
+}
+
+const jumpHeld = () => held.has("jump") || (pad.inUse && pad.down.has(BUTTON.CROSS));
 const KEYMAP = {
   KeyW: "forward", ArrowUp: "forward", KeyS: "back", ArrowDown: "back",
   KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right",
 };
 let locked = false;
-const active = () => state.mode === "playing" && (locked || DEV);
+const active = () => state.mode === "playing" && (locked || DEV || pad.inUse);
 
 window.addEventListener("keydown", (e) => {
   if (e.code === "Backquote" || e.key === "`" || e.key === "~") {
@@ -444,6 +488,7 @@ window.addEventListener("keydown", (e) => {
   if (con.isOpen || state.mode !== "playing") return;
   if (e.target instanceof Element && e.target.closest("input, textarea")) return;
   if (!e.repeat) con.key(e);
+  pad.inUse = false; // keyboard in charge again
   if (KEYMAP[e.code]) { held.add(KEYMAP[e.code]); e.preventDefault(); }
   if (e.code === "Space") { held.add("jump"); e.preventDefault(); }
   if (e.code === "KeyE" && !e.repeat) toggleHold();
@@ -469,11 +514,12 @@ canvas.addEventListener("mousedown", (e) => {
 });
 document.addEventListener("pointerlockchange", () => {
   locked = document.pointerLockElement === canvas;
-  if (state.mode === "playing" && !DEV) $("pause").hidden = locked || con.isOpen;
+  if (state.mode === "playing" && !DEV) $("pause").hidden = locked || con.isOpen || pad.inUse;
   if (!locked) held.clear();
 });
 document.addEventListener("mousemove", (e) => {
   if (!locked || state.mode !== "playing") return;
+  if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) pad.inUse = false;
   const look = LOOK_SPEED * (con.get("sensitivity") / 3);
   player.yaw -= e.movementX * look;
   player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * look, -1.5, 1.5);
@@ -526,6 +572,9 @@ con.cvar("sv_portal_placement_never_fail", 0, { help: "Portals stick to any surf
 con.cvar("mat_disable_bloom", 0, { help: "Turn off the glow around bright lights.", min: 0, max: 1, onChange: (v) => { postfx.bloomEnabled = !v; } });
 con.cvar("mat_vignette", 1, { help: "Darker screen corners.", min: 0, max: 1, onChange: (v) => { postfx.vignette = v ? 0.35 : 0; } });
 con.cvar("mat_postprocess_enable", 1, { help: "All picture effects (bloom, colour grade).", min: 0, max: 1, onChange: (v) => { postfx.enabled = !!v; } });
+con.cvar("joystick", 1, { help: "Use a game controller if one is connected.", min: 0, max: 1 });
+con.cvar("joy_lookspeed", 1, { help: "How fast the right stick turns you.", min: 0.2, max: 3 });
+con.cvar("joy_inverty", 0, { help: "Flip up/down on the right stick.", min: 0, max: 1 });
 con.cvar("r_portal_stencil_depth", 3, { help: "How many portal-in-portal levels to draw (more = slower).", min: 1, max: 5, onChange: (v) => { portals.depth = v; } });
 con.cvar("r_dynamic_resolution", 1, { help: "Lower sharpness automatically to keep the game smooth.", min: 0, max: 1, onChange: (v) => { dynres.enabled = !!v; if (!v) { renderer.setPixelRatio(dynres.max); resize(); } } });
 
@@ -663,7 +712,8 @@ function noclipMove(dt) {
   if (held.has("back")) move.sub(dir);
   if (held.has("right")) move.add(right);
   if (held.has("left")) move.sub(right);
-  if (held.has("jump")) move.y += 1;
+  if (jumpHeld()) move.y += 1;
+  move.addScaledVector(dir, -pad.move.y).addScaledVector(right, pad.move.x);
   if (move.lengthSq() > 0) player.center.addScaledVector(move.normalize(), WALK_SPEED * 2 * dt);
   player.vel.set(0, 0, 0);
   player.prev = {};
@@ -680,6 +730,10 @@ function updatePlayer(dt) {
   if (held.has("right")) _wish.add(right);
   if (held.has("left")) _wish.sub(right);
   if (_wish.lengthSq() > 0) _wish.normalize().multiplyScalar(WALK_SPEED);
+  else if (pad.move.lengthSq() > 0) {
+    // Controller stick: push a little to walk slowly, all the way to walk at full speed.
+    _wish.copy(forward).multiplyScalar(-pad.move.y).addScaledVector(right, pad.move.x).multiplyScalar(WALK_SPEED);
+  }
 
   // Full control on the ground; only a little steering in the air, so flings keep their speed.
   const vx = player.vel.x;
@@ -688,7 +742,7 @@ function updatePlayer(dt) {
     const k = Math.min(1, dt * 14);
     player.vel.x += (_wish.x - vx) * k;
     player.vel.z += (_wish.z - vz) * k;
-    if (held.has("jump")) player.vel.y = JUMP_SPEED;
+    if (jumpHeld()) player.vel.y = JUMP_SPEED;
   } else if (_wish.lengthSq() > 0) {
     const k = Math.min(1, dt * 2);
     const before = Math.hypot(vx, vz);
@@ -792,6 +846,7 @@ async function fade(on) {
 }
 
 function die(lines) {
+  pad.rumble(0.8, 300);
   jimReact("sad");
   say(pick(lines));
   resetChamber();
@@ -853,9 +908,10 @@ async function chamberComplete() {
   state.mode = "loading";
   held.clear();
   jimReact("happy", 2);
+  pad.rumble(0.4, 180);
   try {
     // Cheated runs are timed here only; the server's official clock skips them.
-    const res = flags.cheated
+    const res = flags.cheated || flags.offline
       ? { finished: state.index + 1 >= state.levels.length, total_seconds: (performance.now() - state.startedAt) / 1000 }
       : await api(`/runs/${state.runId}/complete`, {
         method: "POST",
@@ -886,16 +942,28 @@ async function startRun() {
   btn.disabled = true;
   $("start-error").textContent = "";
   try {
-    const run = await api("/runs", { method: "POST" });
+    let run;
+    try {
+      run = await api("/runs", { method: "POST" });
+      flags.offline = false;
+    } catch (err) {
+      // No internet: play the saved chambers, timed on this computer only.
+      if (!(err instanceof TypeError)) throw err;
+      const { levels } = await api("/levels");
+      run = { run_id: null, levels: levels.map((lv) => lv.id) };
+      flags.offline = true;
+      say("You're offline. You can still play, but this run can't go on the leaderboard.");
+    }
     state.runId = run.run_id;
     state.levels = run.levels;
     state.startedAt = performance.now();
     Object.assign(flags, { noclip: false, god: false, gunUpgraded: false, cheated: con.cheats });
+    $("pad-note").hidden = true;
     $("start").hidden = true;
     $("end").hidden = true;
     $("hud").hidden = false;
     await loadChamber(0);
-    if (!DEV) canvas.requestPointerLock();
+    if (!DEV && !pad.inUse) canvas.requestPointerLock(); // controllers don't need the mouse
   } catch (err) {
     $("start-error").textContent = err.message;
     state.mode = "menu";
@@ -916,13 +984,15 @@ function endRun() {
   $("hud").hidden = true;
   $("pause").hidden = true;
   $("final-time").textContent = formatTime(state.totalSeconds);
-  $("final-detail").textContent = flags.cheated
+  $("final-detail").textContent = flags.offline
+    ? "You finished offline, so this run can't go on the leaderboard. Jim still saw it."
+    : flags.cheated
     ? "You finished with cheats on, so this run can't go on the leaderboard. Jim saw everything."
     : `You finished all ${state.levels.length} test chambers. Jim is very proud. He didn't say so.`;
-  $("name-form").hidden = flags.cheated;
+  $("name-form").hidden = flags.cheated || flags.offline;
   $("name-error").textContent = "";
   $("end").hidden = false;
-  if (!flags.cheated) $("name").focus();
+  if (!flags.cheated && !flags.offline) $("name").focus();
 }
 
 $("name-form").addEventListener("submit", async (e) => {
@@ -1049,6 +1119,7 @@ function updateDevInfo() {
 }
 
 function frame(realDt, t) {
+  updatePad(realDt);
   const dt = realDt * con.get("host_timescale");
   fps = fps * 0.95 + (1 / Math.max(realDt, 1e-3)) * 0.05;
   updateDevInfo();
@@ -1121,7 +1192,7 @@ if (DEV) {
     }
     return { center: player.center.clone(), vel: player.vel.clone(), mode: state.mode };
   };
-  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step, slowmo, startSlowmo, con, gun };
+  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step, slowmo, startSlowmo, con, gun, pad, me };
   console.info(`${ENGINE.name} ${ENGINE.version} developer mode`);
 }
 
@@ -1132,3 +1203,24 @@ api("/levels").then(async ({ levels }) => {
   const data = await api(`/levels/${encodeURIComponent(levels[0].id)}`);
   if (state.mode === "menu") loadWorld(data, 1, levels.length);
 }).catch((err) => { $("start-error").textContent = `The lab server isn't answering: ${err.message}`; });
+
+// ---------- installable app ----------
+// The service worker keeps a copy of the game so the installed app works offline.
+if ("serviceWorker" in navigator && !DEV) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+// Chrome and Edge offer an install prompt; show our own button for it on the start screen.
+let installPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  $("install-btn").hidden = false;
+});
+$("install-btn").addEventListener("click", async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => null);
+  installPrompt = null;
+  $("install-btn").hidden = true;
+});
+window.addEventListener("appinstalled", () => { $("install-btn").hidden = true; });

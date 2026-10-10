@@ -131,3 +131,8 @@ docker compose start api
   - Cheats (`sv_cheats 1`): `noclip`, `god`, `map <id>`, `upgrade_portalgun`, `give weapon_portalgun`, `ent_create prop_weighted_cube`, `sv_gravity`, `host_timescale`, `mat_fullbright`, `sv_portal_placement_never_fail`
   - Turning on `sv_cheats` during a run makes it unofficial: no server timing, no leaderboard.
   - Left out on purpose: commands that need Half-Life 2 weapons/NPCs/maps (`impulse 101`, `npc_create`, `give weapon_crowbar`, ...).
+
+## Controller and installable app
+
+- **Controller:** any controller the browser sees with the "standard" layout (PS5 DualSense, Xbox). Left stick walk, right stick look, R2/R1 blue, L2/L1 orange, Cross/A jump (and start on menus), Square/X pick up, Circle/B slow-mo, Triangle/Y hint, D-pad down restart. Console: `joystick 0` turns it off, `joy_lookspeed`, `joy_inverty`.
+- **Install:** Chrome/Edge show "Install the game" on the start screen (or the install icon in the address bar). `web/public/sw.js` saves the game files and all chambers for offline play (network first, so updates show straight away). When `sw.js`'s file list changes, bump its `VERSION`.
