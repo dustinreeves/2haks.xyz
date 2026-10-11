@@ -21,3 +21,5 @@ Take the next free number, add a row here, and append (never replace) your block
 | 8502 | podcasts | api | podcasts.2haks.xyz/api/* |
 | 8601 | (private site) | web (nginx) | not listed |
 | 8602 | (private site) | api | not listed |
+| 8701 | trendy | web (nginx) | trendy.2haks.xyz (not live yet) |
+| 8702 | trendy | api | trendy.2haks.xyz/api/* (not live yet) |
