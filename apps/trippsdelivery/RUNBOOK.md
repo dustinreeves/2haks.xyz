@@ -56,7 +56,21 @@ docker compose down              # stop (the database in data/ is kept)
 
 First-time setup only: `sudo install -d -o 10001 -g 2haks -m 2775 data`, then create `.env` with `ADMIN_TOKEN=$(openssl rand -hex 24)`.
 
-## FormSubmit activation (one time)
+## ntfy phone/browser notifications (recommended)
+
+Set `NTFY_TOPIC=<long random name>` in `.env` and recreate the API (`docker compose up -d --force-recreate api`). Each order is then pushed to https://ntfy.sh/<topic>. Subscribe with the free ntfy app (iOS/Android) or https://ntfy.sh/app. The topic name is the only secret (anyone who knows it can read or post), so keep it long and random. The `emailed` column / `NOT notified` label in the CLI means "no channel worked".
+
+## Outlook/Hotmail SMTP setup (optional; Microsoft may refuse personal accounts)
+
+Needs an Outlook **app password** (account.microsoft.com → Security → Advanced security options → App passwords; two-step verification must be on). Then, in a real terminal (it prompts, typing is hidden):
+
+```bash
+ssh -t 2haks /opt/apps/trippsdelivery/deploy/set-smtp.sh
+```
+
+It writes `SMTP_*` and `NOTIFY_TO` into `.env`, recreates the API and sends a test email. With SMTP working the API emails every order and the browser fallback is skipped. Never paste the password into chat or Git.
+
+## FormSubmit activation (one time, fallback only)
 
 The first order email sent from a browser makes FormSubmit send an "Activate" link to trippreeves@gmail.com. Click it once. Until then orders are still saved (see `tripps orders`). The address is hard-coded in `web/public/app.js` and is visible to anyone who views the page source.
 

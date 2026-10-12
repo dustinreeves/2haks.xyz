@@ -1,15 +1,19 @@
-"""Tell Tripp about a new order by SMTP.
+"""Tell Tripp about a new order.
 
-Only runs when SMTP_HOST is set. Without it the API reports `emailed: false` and the web
-page sends the email itself through FormSubmit (which refuses requests from servers).
-Failures are logged, never raised: the order is already saved.
+Two optional channels, each switched on by its environment variables:
+  - ntfy.sh push notification when NTFY_TOPIC is set
+  - SMTP email when SMTP_HOST is set
+If neither works the API reports `emailed: false` and the web page falls back to FormSubmit
+(which refuses requests from servers). Failures are logged, never raised: the order is saved.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import smtplib
+import urllib.request
 from email.message import EmailMessage
 
 log = logging.getLogger("trippsdelivery.mail")
@@ -40,13 +44,32 @@ def _send_smtp(order: dict) -> None:
         smtp.send_message(msg)
 
 
+def _send_ntfy(order: dict) -> None:
+    body = json.dumps(
+        {
+            "topic": os.environ["NTFY_TOPIC"],
+            "title": f"New order #{order['id']} from {order['name']}",
+            "message": f"{describe(order)}\nTotal: ${order['total']}",
+            "tags": ["moneybag"],
+        }
+    ).encode()
+    req = urllib.request.Request("https://ntfy.sh/", data=body, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        resp.read()
+
+
 def notify(order: dict) -> bool:
-    """Return True if the email went out."""
-    if not os.environ.get("SMTP_HOST"):
-        return False
-    try:
-        _send_smtp(order)
-        return True
-    except Exception as exc:  # noqa: BLE001 - never lose an order over an email problem
-        log.warning("could not email order %s: %s", order["id"], exc)
-        return False
+    """Tell Tripp by every channel that is set up. True if at least one worked."""
+    sent = False
+    for enabled, send, label in (
+        (os.environ.get("SMTP_HOST"), _send_smtp, "email"),
+        (os.environ.get("NTFY_TOPIC"), _send_ntfy, "ntfy"),
+    ):
+        if not enabled:
+            continue
+        try:
+            send(order)
+            sent = True
+        except Exception as exc:  # noqa: BLE001 - never lose an order over a notification problem
+            log.warning("could not send %s for order %s: %s", label, order["id"], exc)
+    return sent

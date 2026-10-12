@@ -22,7 +22,7 @@ because the next sync will overwrite your changes.
 | [Portal Fan Lab](apps/portal/) | [portal.2haks.xyz](https://portal.2haks.xyz) | Tripp | An unofficial Portal fan game on Tripp's own Fire Raze engine: solve test chambers with a portal gun, cubes, buttons and flings, while GLaDOS judges you and Jim the tiny silent core floats along. | `c65f3e4` 2026-10-09, Tripp: Message for Dustin |
 | [Portal Quiz](apps/quiz/) | [quiz.2haks.xyz](https://quiz.2haks.xyz) | Tripp | An unofficial Portal fan game quiz: shoot a blue portal onto the right answer, then jump into the orange one. GLaDOS judges you, and Jim the tiny silent core floats along. | `6a7a628` 2026-10-02, Tripp: Keep API idle connections open longer than Caddy to avoid 502s on POST |
 | [2haks Projects](apps/showcase/) | [projects.2haks.xyz](https://projects.2haks.xyz) | Co-authored | The home page for every app Dustin and Tripp build on 2haks.xyz. Each app gets a card showing what it does and how to use its API and CLI. | `0637995` 2026-10-12, Tripp: Update trippsdelivery card |
-| [Tripp's Delivery](apps/trippsdelivery/) | [trippsdelivery.2haks.xyz](https://trippsdelivery.2haks.xyz) | Tripp | An order page for friends: pick water ($2 each, shared stock), dog sitting ($95 for 2 days) or lawn mowing ($39), and Tripp gets the order. Desktop computers only. | `ff3101f` 2026-10-12, Tripp: Readable phone block message |
+| [Tripp's Delivery](apps/trippsdelivery/) | [trippsdelivery.2haks.xyz](https://trippsdelivery.2haks.xyz) | Tripp | An order page for friends: pick water ($2 each, shared stock), dog sitting ($95 for 2 days) or lawn mowing ($39), and Tripp gets the order. Desktop computers only. | `7f33957` 2026-10-12, Tripp: Add ntfy order notifications |
 <!-- apps:end -->
 
 ## What's in this repo

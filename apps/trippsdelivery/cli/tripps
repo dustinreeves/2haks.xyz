@@ -81,7 +81,7 @@ def main() -> None:
     elif args.cmd == "orders":
         for row in call("GET", f"/api/orders?limit={args.limit}", admin=True)["orders"]:
             when = time.strftime("%Y-%m-%d %H:%M", time.localtime(row["created"]))
-            mail = "emailed" if row["emailed"] else "NOT emailed"
+            mail = "notified" if row["emailed"] else "NOT notified"
             print(f"#{row['id']:<4} {when}  {row['name']:<16} water {row['water']} dog {row['dog']} lawn {row['lawn']}  ${row['total']}  ({mail})")
     elif args.cmd == "refill":
         print("Water stock is now", call("PUT", "/api/stock", {"water": args.water}, admin=True)["water"])
