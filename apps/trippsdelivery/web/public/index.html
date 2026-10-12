@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tripp's Delivery</title>
+<meta name="viewport" content="width=1024">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="blocked" role="alert">Tripp's Delivery only works on a computer.<br>Please open this page on a desktop or laptop.</div>
+
+<header>
+  <h1>Tripp's Delivery</h1>
+  <p>Water, dog sitting &amp; lawn mowing &mdash; for friends</p>
+</header>
+
+<main>
+  <div class="card">
+    <label class="name" for="name">Type your name</label>
+    <input type="text" id="name" placeholder="Your name" autocomplete="off" maxlength="40">
+  </div>
+
+  <div class="card">
+    <div class="item">
+      <div><h3>Water bottle</h3><small>In stock: <b id="stock">...</b></small></div>
+      <div class="qty">
+        <span class="price">$2 each</span>
+        <button id="wm" aria-label="Fewer water">&minus;</button><span id="wq">0</span><button id="wp" aria-label="More water">+</button>
+      </div>
+    </div>
+    <div class="item">
+      <div><h3>Dog sitting</h3><small>Per booking</small></div>
+      <div class="qty">
+        <span class="price">$95</span>
+        <button id="dm" aria-label="Fewer dog sitting">&minus;</button><span id="dq">0</span><button id="dp" aria-label="More dog sitting">+</button>
+      </div>
+    </div>
+    <div class="item">
+      <div><h3>Lawn mowing</h3><small>Per lawn</small></div>
+      <div class="qty">
+        <span class="price">$39</span>
+        <button id="lm" aria-label="Fewer lawn mowing">&minus;</button><span id="lq">0</span><button id="lp" aria-label="More lawn mowing">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="total"><span>Total</span><span id="total">$0</span></div>
+    <button id="send" disabled>Send order to Tripp</button>
+    <div id="status" role="status"></div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+
+trippsdelivery.2haks.xyz {
+	encode zstd gzip
+	handle /api/* {
+		request_body {
+			max_size 8KB
+		}
+		reverse_proxy 127.0.0.1:8802
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8801
+	}
+}

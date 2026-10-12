@@ -1,0 +1,28 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Segoe UI, Arial, sans-serif; background: #eef4fb; color: #1b2a3a; }
+header { background: #1f6feb; color: #fff; text-align: center; padding: 28px 0; }
+header h1 { margin: 0; font-size: 44px; letter-spacing: 1px; }
+header p { margin: 6px 0 0; opacity: .9; }
+main { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+.card { background: #fff; border-radius: 12px; padding: 22px 26px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+label.name { font-weight: 600; display: block; margin-bottom: 8px; }
+input[type=text] { width: 100%; padding: 12px; font-size: 18px; border: 2px solid #c5d3e3; border-radius: 8px; }
+.item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #e3eaf2; }
+.item:last-child { border-bottom: 0; }
+.item h3 { margin: 0 0 4px; }
+.item small { color: #5a6b7d; }
+.price { font-weight: 700; font-size: 20px; margin-right: 24px; min-width: 60px; text-align: right; }
+.qty { display: flex; align-items: center; gap: 10px; }
+.qty button { width: 34px; height: 34px; font-size: 20px; border: 0; border-radius: 6px; background: #1f6feb; color: #fff; cursor: pointer; }
+.qty button:disabled { background: #b7c4d4; cursor: not-allowed; }
+.qty span { min-width: 22px; text-align: center; font-size: 18px; }
+.qty .price { text-align: right; }
+.total { display: flex; justify-content: space-between; font-size: 24px; font-weight: 700; }
+#send { width: 100%; margin-top: 16px; padding: 14px; font-size: 20px; border: 0; border-radius: 8px; background: #16a34a; color: #fff; cursor: pointer; }
+#send:disabled { background: #9db8a8; cursor: not-allowed; }
+#status { margin-top: 12px; font-weight: 600; min-height: 22px; }
+#status.ok { color: #16a34a; }
+#status.bad { color: #dc2626; }
+#blocked { display: none; position: fixed; inset: 0; background: #1f6feb; color: #fff; align-items: center; justify-content: center; text-align: center; padding: 30px; font-size: 26px; z-index: 99; }
+.blocked-on #blocked { display: flex; }
+.blocked-on header, .blocked-on main { display: none; }

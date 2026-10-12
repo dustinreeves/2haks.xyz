@@ -1,0 +1,57 @@
+# Tripp's Delivery: https://trippsdelivery.2haks.xyz
+# Caddy runs on the host, so each service publishes on 127.0.0.1 only.
+# (Docker-published ports skip UFW, so never publish on 0.0.0.0.)
+
+name: trippsdelivery
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  networks: [web-proxy]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  api:
+    <<: *hardening
+    build: ./api
+    image: trippsdelivery-api:local
+    # Secrets (ADMIN_TOKEN, optional SMTP_*) live in .env, which is not in Git.
+    env_file: [.env]
+    environment:
+      TRIPPS_DB: /var/lib/trippsdelivery/delivery.db
+    volumes:
+      # SQLite database (water stock + orders). Owned by uid 10001 on the host.
+      - ./data:/var/lib/trippsdelivery
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8802:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    <<: *hardening
+    build: ./web
+    image: trippsdelivery-web:local
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8801:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  web-proxy:
+    external: true
