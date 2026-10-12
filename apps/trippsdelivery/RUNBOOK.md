@@ -4,6 +4,8 @@
 **Folder:** `/opt/apps/trippsdelivery` (a Git repo on the server)
 **What it does:** an order page for friends. They type their name and pick water ($2 each, shared stock), dog sitting ($95 for 2 days) or lawn mowing ($39). The order is saved, the water stock goes down, and Tripp gets an email. Desktop computers only (phones and tablets see a "use a computer" message). Payment happens outside the site.
 
+`web/public/water.png` is Brookshire's own product photo of their purified drinking water (24-count, 16.9 oz), from https://www.brookshires.com/product/brookshires-purified-drinking-water-id-00092825092742. It belongs to Brookshire's; we only show it next to the water item.
+
 ## How it fits together
 
 ```

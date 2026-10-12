@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Tripp's Delivery</title>
-<meta name="viewport" content="width=1024">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,7 +23,10 @@
 
   <div class="card">
     <div class="item">
-      <div><h3>Water bottle</h3><small>In stock: <b id="stock">...</b></small></div>
+      <div class="info">
+        <img src="water.png" alt="Brookshire's purified drinking water" width="90" height="90">
+        <div><h3>Water bottle</h3><small>Brookshire's purified drinking water<br>In stock: <b id="stock">...</b></small></div>
+      </div>
       <div class="qty">
         <span class="price">$2 each</span>
         <button id="wm" aria-label="Fewer water">&minus;</button><span id="wq">0</span><button id="wp" aria-label="More water">+</button>

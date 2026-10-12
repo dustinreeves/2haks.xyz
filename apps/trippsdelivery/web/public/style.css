@@ -9,6 +9,8 @@ label.name { font-weight: 600; display: block; margin-bottom: 8px; }
 input[type=text] { width: 100%; padding: 12px; font-size: 18px; border: 2px solid #c5d3e3; border-radius: 8px; }
 .item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #e3eaf2; }
 .item:last-child { border-bottom: 0; }
+.info { display: flex; align-items: center; gap: 14px; }
+.info img { object-fit: contain; border-radius: 8px; background: #fff; }
 .item h3 { margin: 0 0 4px; }
 .item small { color: #5a6b7d; }
 .price { font-weight: 700; font-size: 20px; margin-right: 24px; min-width: 60px; white-space: nowrap; text-align: right; }
