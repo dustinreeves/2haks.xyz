@@ -2,7 +2,7 @@
 
 **URL:** https://trippsdelivery.2haks.xyz
 **Folder:** `/opt/apps/trippsdelivery` (a Git repo on the server)
-**What it does:** an order page for friends. They type their name and pick water ($2 each, shared stock), dog sitting ($95) or lawn mowing ($39). The order is saved, the water stock goes down, and Tripp gets an email. Desktop computers only (phones and tablets see a "use a computer" message). Payment happens outside the site.
+**What it does:** an order page for friends. They type their name and pick water ($2 each, shared stock), dog sitting ($95 for 2 days) or lawn mowing ($39). The order is saved, the water stock goes down, and Tripp gets an email. Desktop computers only (phones and tablets see a "use a computer" message). Payment happens outside the site.
 
 ## How it fits together
 

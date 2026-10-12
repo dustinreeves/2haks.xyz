@@ -153,7 +153,7 @@
       "name": "Tripp's Delivery",
       "launch_date": "2026-10-12",
       "url": "https://trippsdelivery.2haks.xyz",
-      "description": "An order page for friends: pick water ($2 each, shared stock), dog sitting ($95) or lawn mowing ($39), and Tripp gets the order by email. Desktop computers only.",
+      "description": "An order page for friends: pick water ($2 each, shared stock), dog sitting ($95 for 2 days) or lawn mowing ($39), and Tripp gets the order. Desktop computers only.",
       "author": "Tripp",
       "examples": {
         "api": [

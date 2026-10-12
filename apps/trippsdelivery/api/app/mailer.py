@@ -22,7 +22,7 @@ def describe(order: dict) -> str:
     if order["water"]:
         parts.append(f"{order['water']} x Water")
     if order["dog"]:
-        parts.append(f"{order['dog']} x Dog sitting")
+        parts.append(f"{order['dog']} x Dog sitting (2 days each)")
     if order["lawn"]:
         parts.append(f"{order['lawn']} x Lawn mowing")
     return ", ".join(parts)

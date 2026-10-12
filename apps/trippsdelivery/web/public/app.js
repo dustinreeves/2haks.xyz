@@ -54,7 +54,7 @@ function loadStock() {
 function emailFallback(order) {
   var items = [];
   if (order.water) items.push(order.water + " x Water");
-  if (order.dog) items.push(order.dog + " x Dog sitting");
+  if (order.dog) items.push(order.dog + " x Dog sitting (2 days each)");
   if (order.lawn) items.push(order.lawn + " x Lawn mowing");
   fetch("https://formsubmit.co/ajax/trippreeves@gmail.com", {
     method: "POST",
