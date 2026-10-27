@@ -294,6 +294,64 @@ const ceiling = surface({
   strength: 5,
 });
 
+// ---------- the Backrooms: yellow wallpaper, damp carpet, office ceiling tiles ----------
+
+const wallpaper = surface({
+  color: (g, s) => {
+    g.fillStyle = "#cdb86a";
+    g.fillRect(0, 0, s, s);
+    // Faint repeating pattern of thin stripes and little diamonds.
+    g.strokeStyle = "rgba(150, 128, 52, 0.35)";
+    g.lineWidth = 2;
+    for (let x = 0; x < s; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, s); g.stroke(); }
+    g.fillStyle = "rgba(160, 138, 60, 0.3)";
+    for (let x = 16; x < s; x += 32) {
+      for (let y = 16; y < s; y += 48) {
+        g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.fill();
+      }
+    }
+    // Old stains.
+    speckle(g, s, 71, 60, (v) => `rgba(120, 100, 40, ${0.04 + v * 0.06})`, 40);
+    const base = g.createLinearGradient(0, s * 0.85, 0, s);
+    base.addColorStop(0, "rgba(110, 92, 40, 0)");
+    base.addColorStop(1, "rgba(110, 92, 40, 0.25)");
+    g.fillStyle = base;
+    g.fillRect(0, s * 0.85, s, s * 0.15);
+  },
+  rough: (g, s) => { g.fillStyle = "#e0e0e0"; g.fillRect(0, 0, s, s); },
+});
+
+const carpet = surface({
+  color: (g, s) => {
+    g.fillStyle = "#a9924f";
+    g.fillRect(0, 0, s, s);
+    speckle(g, s, 73, 5000, (v) => `rgba(${v < 0.5 ? 140 : 190}, ${v < 0.5 ? 118 : 165}, ${v < 0.5 ? 60 : 95}, 0.25)`, 1.5);
+    speckle(g, s, 79, 25, () => "rgba(90, 76, 36, 0.12)", 50); // damp patches
+  },
+  height: (g, s) => {
+    g.fillStyle = "#808080";
+    g.fillRect(0, 0, s, s);
+    speckle(g, s, 83, 6000, (v) => `rgba(${v < 0.5 ? 0 : 255},${v < 0.5 ? 0 : 255},${v < 0.5 ? 0 : 255},0.3)`, 1.2);
+  },
+  rough: (g, s) => { g.fillStyle = "#f0f0f0"; g.fillRect(0, 0, s, s); },
+  strength: 2,
+});
+
+const officeCeiling = surface({
+  color: (g, s) => {
+    g.fillStyle = "#8f8a70";
+    g.fillRect(0, 0, s, s);
+    const t = s / 4;
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        g.fillStyle = "#ddd6b8";
+        g.fillRect(i * t + 3, j * t + 3, t - 6, t - 6);
+      }
+    }
+    speckle(g, s, 89, 1500, () => "rgba(120, 110, 80, 0.15)", 1);
+  },
+});
+
 // ---------- cube ----------
 
 const cube = surface({
@@ -361,7 +419,7 @@ const door = surface({
   },
 });
 
-export const TEXTURES = { white, metal, floor, ceiling, cube, door };
+export const TEXTURES = { white, metal, floor, ceiling, cube, door, wallpaper, carpet, officeCeiling };
 
 // A box whose texture repeats every `tile` metres instead of stretching.
 // Uses material groups: 0 = sides, 1 = top (so floors can look different from walls), 2 = bottom.

@@ -59,6 +59,12 @@ const FACES = {
   white: [MATS.white, MATS.white, MATS.white],
   metal: [MATS.metal, MATS.floor, MATS.ceiling],
   glass: [MATS.glass, MATS.glass, MATS.glass],
+  // The Backrooms: wallpaper walls, carpet floors, office-tile ceilings.
+  backrooms: [
+    new THREE.MeshStandardMaterial({ ...TEXTURES.wallpaper, roughness: 0.9 }),
+    new THREE.MeshStandardMaterial({ ...TEXTURES.carpet, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ ...TEXTURES.officeCeiling, roughness: 0.9 }),
+  ],
 };
 const BUTTON_BASE = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6 });
 const OBS_INSIDE = new THREE.MeshBasicMaterial({ color: 0x0b0d10 });
@@ -215,6 +221,7 @@ function makeCubeModel() {
 
 export class World {
   constructor(scene) {
+    this.scene = scene;
     this.group = new THREE.Group();
     scene.add(this.group);
     this.data = null;
@@ -236,6 +243,8 @@ export class World {
   }
 
   clear() {
+    this.scene.fog = null;
+    this.flicker = [];
     this.group.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
       if (o.material && o.userData.ownMaterial) o.material.dispose();
@@ -356,7 +365,7 @@ export class World {
       const s = { ...box3(raw), type: raw.type };
       s.mesh = this._box(s, FACES[s.type]);
       this.solids.push(s);
-      if (options.assemble === false) return;
+      if (options.assemble === false || data.theme === "backrooms") return;
       let from;
       let delay;
       if (i < shell.length) {
@@ -372,11 +381,15 @@ export class World {
     this.assembleTime = 0;
     this._applyAssembly();
 
-    ceilingLights(this.group, r, data.theme === "overgrown" ? { intensity: 45 } : {});
-    this._observationWindow(r);
-    if (options.chamberNumber) this._chamberSign(r, options.chamberNumber, options.chamberCount, data.name, data);
-    if (data.theme === "overgrown") this._overgrowth(r, data);
-    this._arrivalTube(start, options.arrivalTube !== false);
+    if (data.theme === "backrooms") {
+      this._backrooms(r, data);
+    } else {
+      ceilingLights(this.group, r, data.theme === "overgrown" ? { intensity: 45 } : {});
+      this._observationWindow(r);
+      if (options.chamberNumber) this._chamberSign(r, options.chamberNumber, options.chamberCount, data.name, data);
+      if (data.theme === "overgrown") this._overgrowth(r, data);
+      this._arrivalTube(start, options.arrivalTube !== false);
+    }
 
     for (const raw of data.goo) {
       const b = box3(raw);
@@ -546,6 +559,13 @@ export class World {
         tube.lowering = false;
       }
     }
+    // Buzzing Backrooms lights: a few panels flicker now and then.
+    for (const f of this.flicker || []) {
+      f.t -= dt;
+      if (f.t < 0) f.t = f.rand() < 0.15 ? 0.05 + f.rand() * 0.15 : 0.5 + f.rand() * 3;
+      const on = !(f.t < 0.2 && f.rand() < 0.6);
+      f.mat.color.setScalar(on ? 2.2 : 0.3);
+    }
     if (this.dust) {
       const pos = this.dust.geometry.attributes.position;
       for (let i = 0; i < pos.count; i++) {
@@ -601,6 +621,62 @@ export class World {
     group.position.set(start.x, floorY, start.z);
     this.group.add(group);
     this.tube = { group, floorY, height, lowering: false };
+  }
+
+  // ---------- the Backrooms: endless yellow rooms, humming lights, a faint haze ----------
+
+  _backrooms(r, data) {
+    this.scene.fog = new THREE.Fog(0xcfc08a, 3, 22);
+    this.group.add(new THREE.HemisphereLight(0xfff3c4, 0x7a6a3a, 1.3));
+    // Even, flat light everywhere (the ceiling faces down, so the sky light alone leaves it dark).
+    this.group.add(new THREE.AmbientLight(0xfff0c8, 1.1));
+    const rand = seeded(data.seed || 1);
+    const panelGeo = new THREE.PlaneGeometry(1.2, 0.6);
+    const steady = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 1, 0.9).multiplyScalar(2.2) });
+    this.flicker = [];
+    let lights = 0;
+    for (let x = r.min.x + 2; x < r.max.x; x += 4) {
+      for (let z = r.min.z + 2; z < r.max.z; z += 4) {
+        let mat = steady;
+        if (rand() < 0.08) {
+          mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 1, 0.9).multiplyScalar(2.2) });
+          this.flicker.push({ mat, t: rand() * 3, rand });
+        }
+        const panel = new THREE.Mesh(panelGeo, mat);
+        panel.userData.ownMaterial = mat !== steady;
+        panel.rotation.x = Math.PI / 2;
+        panel.position.set(x, r.max.y - 0.01, z);
+        this.group.add(panel);
+        if (lights < 6 && rand() < 0.12) {
+          const lamp = new THREE.PointLight(0xfff0c0, 8, 10);
+          lamp.position.set(x, r.max.y - 0.4, z);
+          this.group.add(lamp);
+          lights++;
+        }
+      }
+    }
+    steady.userData = {};
+    // A glowing EXIT sign over the way out.
+    const e = box3(data.exit);
+    const tex = canvasTexture(256, (g, s) => {
+      g.fillStyle = "#0d1a10";
+      g.fillRect(0, 0, s, s);
+      g.fillStyle = "#6dff8a";
+      g.font = "bold 92px 'Segoe UI', system-ui, sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("EXIT", s / 2, s / 2);
+    });
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    const sign = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.2, 0.5),
+      new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.6, 1.6, 1.6), side: THREE.DoubleSide }),
+    );
+    sign.userData.ownMaterial = true;
+    sign.position.set((e.min.x + e.max.x) / 2, r.max.y - 0.35, (e.min.z + e.max.z) / 2);
+    const glow = new THREE.PointLight(0x6dff8a, 4, 6);
+    glow.position.copy(sign.position).add(new V3(0, -0.3, 0));
+    this.group.add(sign, glow);
   }
 
   // ---------- the overgrown theme: an old, broken wing taken over by plants ----------
@@ -718,4 +794,71 @@ export class World {
     this.dust.userData = { ownMaterial: true, top: r.max.y, bottom: r.min.y };
     this.group.add(this.dust);
   }
+}
+
+/**
+ * A new Backrooms maze (a level in the normal level format). Different every time you get lost.
+ * A maze of 4 m rooms is dug out, then extra walls are knocked down so it feels like
+ * big, empty, confusing open spaces. You start in one corner; the exit is in the far one.
+ */
+export function makeBackroomsLevel(seed = Math.floor(Math.random() * 1e9)) {
+  const N = 9;
+  const CELL = 4;
+  const H = 3;
+  const T = 0.15; // half wall thickness
+  const rand = seeded(seed);
+  // Depth-first maze: east[i][j] / south[i][j] true = wall still standing.
+  const east = Array.from({ length: N }, () => Array(N).fill(true));
+  const south = Array.from({ length: N }, () => Array(N).fill(true));
+  const seen = Array.from({ length: N }, () => Array(N).fill(false));
+  const stack = [[0, 0]];
+  seen[0][0] = true;
+  while (stack.length) {
+    const [i, j] = stack[stack.length - 1];
+    const next = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      .map(([di, dj]) => [i + di, j + dj, di, dj])
+      .filter(([a, b]) => a >= 0 && b >= 0 && a < N && b < N && !seen[a][b]);
+    if (!next.length) { stack.pop(); continue; }
+    const [a, b, di, dj] = next[Math.floor(rand() * next.length)];
+    if (di === 1) east[i][j] = false;
+    if (di === -1) east[a][b] = false;
+    if (dj === 1) south[i][j] = false;
+    if (dj === -1) south[a][b] = false;
+    seen[a][b] = true;
+    stack.push([a, b]);
+  }
+  const boxes = [];
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      if (i < N - 1 && east[i][j] && rand() > 0.3) {
+        const x = (i + 1) * CELL;
+        boxes.push({ min: [x - T, 0, j * CELL - T], max: [x + T, H, (j + 1) * CELL + T], type: "backrooms" });
+      }
+      if (j < N - 1 && south[i][j] && rand() > 0.3) {
+        const z = (j + 1) * CELL;
+        boxes.push({ min: [i * CELL - T, 0, z - T], max: [(i + 1) * CELL + T, H, z + T], type: "backrooms" });
+      }
+    }
+  }
+  const far = N * CELL;
+  return {
+    id: "backrooms",
+    order: 0,
+    name: "The Backrooms",
+    theme: "backrooms",
+    seed,
+    intro: "",
+    hint: "Somewhere in here there is a green EXIT sign. It is always as far away as possible.",
+    gun: "both",
+    start: { pos: [CELL / 2, 1.6, CELL / 2], yaw: 180 },
+    room: { min: [0, 0, 0], max: [far, H, far], type: "backrooms", floor: true },
+    boxes,
+    fixed_portals: [],
+    doors: [],
+    buttons: [],
+    cubes: [],
+    goo: [],
+    fizzlers: [],
+    exit: { min: [far - CELL + 0.6, 0, far - CELL + 0.6], max: [far - 0.6, 2.6, far - 0.6] },
+  };
 }

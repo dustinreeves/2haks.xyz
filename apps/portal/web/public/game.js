@@ -3,7 +3,7 @@
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
 import {
   applyGravity, castRay, CUBE_HALF, DevConsole, ENGINE, insideBox, moveBody, overlaps, physicsSettings, PortalSystem,
-  BUTTON, DynamicResolution, GamepadInput, LAYERS, makeTestSubject, PostFX, setupLighting, World,
+  BUTTON, DynamicResolution, GamepadInput, LAYERS, makeBackroomsLevel, makeTestSubject, PostFX, setupLighting, World,
 } from "./fireraze/index.js";
 
 const V3 = THREE.Vector3;
@@ -47,6 +47,11 @@ const LINES = {
   fizzle: ["The fizzler erased your portals. That is its job. It loves its job."],
   cubeFizzle: ["The cube was fizzled. Don't worry, it felt nothing. A new one is on the way."],
   cubeGoo: ["The cube fell in the goo. I'll make you a new one. Try to keep this one dry."],
+  backrooms: [
+    "You noclipped out of reality. This is not one of my test chambers. I did not build it. Nobody did. Find the exit.",
+    "Oh no. You fell out of the test and into... somewhere else. The lights hum. The carpet is damp. Find the green EXIT sign.",
+  ],
+  backroomsOut: ["You found your way back. I am not going to ask where you were. Restarting the chamber."],
   end: ["All test chambers complete. You have been a wonderful test subject. Jim agrees. He did not say so, but he agrees."],
 };
 
@@ -718,6 +723,7 @@ function noclipMove(dt) {
   player.vel.set(0, 0, 0);
   player.prev = {};
   if (insideBox(player.center, world.exit)) chamberComplete();
+  if (outOfBounds(player.center)) enterBackrooms();
 }
 
 function updatePlayer(dt) {
@@ -769,6 +775,7 @@ function updatePlayer(dt) {
   // Hazards and the exit.
   const c = player.center;
   if (!flags.god && world.goo.some((g) => insideBox(c, g))) return die(LINES.goo);
+  if (outOfBounds(c)) return enterBackrooms(); // clipped out into the void
   if (c.y < world.data.room.min[1] - 20) return die(LINES.fall);
   if (world.fizzlers.some((f) => overlaps(c, PLAYER_HALF, f))) {
     if (portals.clearUnfixed()) sayOnce(LINES.fizzle);
@@ -901,8 +908,55 @@ async function loadChamber(i) {
   });
 }
 
+// ---------- the Backrooms (secret!) ----------
+// Clip out of a chamber into the void (or noclip out of it) and you fall into the Backrooms:
+// a new yellow maze every time. Reach the green EXIT to get back to the chamber you left.
+function outOfBounds(c) {
+  if (state.inBackrooms || state.mode !== "playing" || !world.data) return false;
+  const r = world.data.room;
+  const m = 0.35;
+  return c.x < r.min[0] - m || c.x > r.max[0] + m || c.z < r.min[2] - m || c.z > r.max[2] + m
+    || c.y > r.max[1] + m || c.y < r.min[1] - 2.5;
+}
+
+let backroomsBusy = false;
+async function enterBackrooms() {
+  if (backroomsBusy || state.inBackrooms) return;
+  backroomsBusy = true;
+  state.mode = "loading";
+  state.inBackrooms = true;
+  held.clear();
+  stopSlowmo();
+  flags.noclip = false;
+  pad.rumble(0.6, 400);
+  await fade(true);
+  loadWorld(makeBackroomsLevel());
+  $("chamber-num").textContent = "Level 0";
+  $("chamber-name").textContent = "The Backrooms";
+  jimReact("sad", 3);
+  say(pick(LINES.backrooms));
+  showControlsBriefly();
+  state.mode = "playing";
+  await fade(false);
+  backroomsBusy = false;
+}
+
+async function leaveBackrooms() {
+  if (backroomsBusy) return;
+  backroomsBusy = true;
+  state.mode = "loading";
+  held.clear();
+  await fade(true);
+  state.inBackrooms = false;
+  await loadChamber(state.index); // back to the start of the chamber you fell out of
+  say(pick(LINES.backroomsOut));
+  await fade(false);
+  backroomsBusy = false;
+}
+
 let completing = false;
 async function chamberComplete() {
+  if (state.inBackrooms) return leaveBackrooms();
   if (completing) return;
   completing = true;
   state.mode = "loading";
@@ -958,6 +1012,7 @@ async function startRun() {
     state.levels = run.levels;
     state.startedAt = performance.now();
     Object.assign(flags, { noclip: false, god: false, gunUpgraded: false, cheated: con.cheats });
+    state.inBackrooms = false;
     $("pad-note").hidden = true;
     $("start").hidden = true;
     $("end").hidden = true;

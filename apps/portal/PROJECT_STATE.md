@@ -25,6 +25,9 @@
 - [x] Controller support (`fireraze/gamepad.js`, browser Gamepad API; DualSense/Xbox): left stick walk, right stick look, R2/R1 blue, L2/L1 orange, ✕ jump / start, □ pick up, ○ slow-mo, △ hint, D-pad down restart, rumble. Cvars `joystick`, `joy_lookspeed`, `joy_inverty`. Tested with a simulated controller in dev mode (no real controller in the test browser)
 - [x] Installable app (PWA): `manifest.webmanifest`, icons in `web/public/icons/`, service worker `sw.js` (network first, saved copy offline; saves all chambers), "Install the game" button on the start screen. Offline runs play the saved chambers but skip the leaderboard. Bump `VERSION` in `sw.js` when its file list changes
 
+- [x] Secret Backrooms: clip out of a chamber into the void (or `noclip` out of it) and you land in "Level 0", a new random yellow maze each time (`makeBackroomsLevel` in `fireraze/world.js`: wallpaper, damp carpet, office ceiling, flickering lights, haze). The green EXIT takes you back to the start of the chamber you left. The run keeps going (still official).
+- NOTE: portal clipping is ON PURPOSE (Tripp asked to keep it): `PortalSystem.holes()` only checks the body's middle, so your head can slip into the wall around a portal and out into the void. That's the way into the Backrooms. Please don't "fix" it without asking Tripp.
+
 ## Tested in the browser (dev mode)
 - Chamber 01 start to finish: shot blue, walked through, came out of the orange portal, reached the exit, server accepted the time.
 - Chamber 02: portals to the ledge, picked up the cube, carried it down; the button opened the door.

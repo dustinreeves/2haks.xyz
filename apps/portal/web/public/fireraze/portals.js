@@ -204,7 +204,11 @@ export class PortalSystem {
     for (const p of this.all) this.clear(p);
   }
 
-  /** Boxes a body may pass through right now because it is lined up with a portal in them. */
+  /**
+   * Boxes a body may pass through right now because it is lined up with a portal in them.
+   * Note: this only checks the body's middle, so you can sometimes clip into the wall around a
+   * portal (and out into the void). That's on purpose: it's the secret way into the Backrooms.
+   */
   holes(center) {
     const ignore = new Set();
     if (!this.linked) return ignore;
