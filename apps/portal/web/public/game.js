@@ -1,6 +1,7 @@
 // Portal Fan Lab: an unofficial Portal fan game, running on the Fire Raze engine.
 // Test chambers come from the API (/api/levels). The API also keeps the run clock and the leaderboard.
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
+import { BackroomsMonster } from "./monster.js";
 import {
   applyGravity, castRay, CUBE_HALF, DevConsole, ENGINE, insideBox, moveBody, overlaps, physicsSettings, PortalSystem,
   BUTTON, DynamicResolution, GamepadInput, LAYERS, makeBackroomsLevel, makePortalGun, makeTestSubject, PostFX,
@@ -57,8 +58,9 @@ const LINES = {
 };
 
 let subtitleTimer;
-function say(text) {
+function say(text, speaker = "GLaDOS:") {
   if (!text) return;
+  document.querySelector("#subtitle b").textContent = speaker;
   $("subtitle-text").textContent = text;
   $("subtitle").hidden = false;
   clearTimeout(subtitleTimer);
@@ -98,6 +100,7 @@ setupLighting(renderer, scene);
 
 const camera = new THREE.PerspectiveCamera(75, 1, 0.03, 200);
 const postfx = new PostFX(renderer, scene, camera);
+const monster = new BackroomsMonster(scene); // the thing in the Backrooms (monster.js)
 const dynres = new DynamicResolution({
   onChange: (ratio) => {
     renderer.setPixelRatio(ratio);
@@ -333,6 +336,7 @@ function lookDir(out = new V3()) {
 }
 
 function loadWorld(data, chamberNumber = 1, chamberCount = 1) {
+  monster.stop();
   world.build(data, { chamberNumber, chamberCount });
   buildJimRail(data);
   stopSlowmo();
@@ -499,6 +503,11 @@ con.cvar("sv_portal_placement_never_fail", 0, { help: "Portals stick to any surf
 con.cvar("mat_disable_bloom", 0, { help: "Turn off the glow around bright lights.", min: 0, max: 1, onChange: (v) => { postfx.bloomEnabled = !v; } });
 con.cvar("mat_vignette", 1, { help: "Darker screen corners.", min: 0, max: 1, onChange: (v) => { postfx.vignette = v ? 0.35 : 0; } });
 con.cvar("mat_postprocess_enable", 1, { help: "All picture effects (bloom, colour grade).", min: 0, max: 1, onChange: (v) => { postfx.enabled = !!v; } });
+con.cvar("br_monster", 1, {
+  help: "The thing in the Backrooms (0 = gone).", min: 0, max: 1,
+  onChange: (v) => { if (!v) monster.stop(); else if (state.inBackrooms) monster.start(world.data); },
+});
+con.cvar("br_monster_volume", 0.8, { help: "How loud its breathing is (0-1).", min: 0, max: 1, onChange: (v) => monster.setVolume(v) });
 con.cvar("joystick", 1, { help: "Use a game controller if one is connected.", min: 0, max: 1 });
 con.cvar("joy_lookspeed", 1, { help: "How fast the right stick turns you.", min: 0.2, max: 3 });
 con.cvar("joy_inverty", 0, { help: "Flip up/down on the right stick.", min: 0, max: 1 });
@@ -853,6 +862,7 @@ async function enterBackrooms() {
   pad.rumble(0.6, 400);
   await fade(true);
   loadWorld(makeBackroomsLevel());
+  if (con.get("br_monster")) monster.start(world.data);
   $("chamber-num").textContent = "Level 0";
   $("chamber-name").textContent = "The Backrooms";
   jimReact("sad", 3);
@@ -874,6 +884,16 @@ async function leaveBackrooms() {
   say(pick(LINES.backroomsOut));
   await fade(false);
   backroomsBusy = false;
+}
+
+// It got right behind you: the lights die for a moment, then come back. It's gone. For now.
+let lightsOutTimer = null;
+function lightsOut() {
+  pad.rumble(1, 600);
+  say("[it breathes right next to your ear]", "");
+  renderer.toneMappingExposure = 0.02;
+  clearTimeout(lightsOutTimer);
+  lightsOutTimer = setTimeout(() => { renderer.toneMappingExposure = 1.0; }, 1400);
 }
 
 let completing = false;
@@ -914,6 +934,7 @@ async function chamberComplete() {
 }
 
 async function startRun() {
+  monster.unlockAudio(); // a click: browsers now allow sound
   const btn = $("start-btn");
   btn.disabled = true;
   $("start-error").textContent = "";
@@ -1115,6 +1136,13 @@ function frame(realDt, t) {
     if (state.mode === "playing") world.updateButtonsAndDoors(worldDt, [player]);
     for (const c of world.cubes) c.mesh.position.copy(c.center);
     updateJim(worldDt, worldTime);
+    if (state.inBackrooms && state.mode === "playing" && monster.active) {
+      monster.update({
+        eye: eyePos(), look: lookDir(), camera, solids: world.solidsNow(), dt: worldDt,
+        onCaught: lightsOut,
+        caption: (text) => say(text, ""),
+      });
+    }
   }
   if (state.mode === "menu") player.yaw = Math.sin(t * 0.15) * 0.6;
 
@@ -1169,7 +1197,7 @@ if (DEV) {
     }
     return { center: player.center.clone(), vel: player.vel.clone(), mode: state.mode };
   };
-  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step, slowmo, startSlowmo, con, gun, pad, me, GUN_POS, GUN_TILT };
+  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step, slowmo, startSlowmo, con, gun, pad, me, GUN_POS, GUN_TILT, monster };
   console.info(`${ENGINE.name} ${ENGINE.version} developer mode`);
 }
 

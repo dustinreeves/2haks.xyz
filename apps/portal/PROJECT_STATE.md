@@ -30,7 +30,11 @@
 
 - [x] New portal gun model `fireraze/portalgun.js` (our own build from shapes, modelled by eye from reference pictures on the Portal wiki; no copied model/textures): egg-shaped white shell with seams and a top indicator light, chin scoop, chunky barrel with hex nut, muzzle rings and slotted collar, glass core tube, three long spidery claws with elbows/paddles and cables. First-person pose tuned in `game.js` (`GUN_POS`, `GUN_TILT`, adjustable in ?dev via `fireraze.GUN_POS`)
 - [x] Jim stays out of the Backrooms
-- PENDING (waiting for Tripp's OK to download): CC0 textures from ambientCG (MetalPlates008, Concrete031, PaintedPlaster017, OfficeCeiling001, OfficeCeiling005, Carpet016, Wallpaper001A) and Three.js GTAO add-on files for ambient occlusion. Optional: "Raygun" by Gabriel Valdivia (CC-BY 3.0, poly.pizza) as a second gun, needs credit. No free-licensed portal gun model exists online (checked poly.pizza, OpenGameArt, CGTrader).
+- (Textures: downloaded, see above.) Optional: "Raygun" by Gabriel Valdivia (CC-BY 3.0, poly.pizza) as a second gun, needs credit. No free-licensed portal gun model exists online (checked poly.pizza, OpenGameArt, CGTrader).
+
+- [x] CC0 photo textures (ambientCG, downloaded with Tripp's OK): `web/public/textures/` (+ LICENSE.txt), loaded by `photoSet()`/`PHOTO` in `fireraze/textures.js`. Metal walls, concrete floors, emissive ceiling panels, Backrooms wallpaper/carpet/office ceiling. Tripp's white tile design kept (with plaster roughness). Cached by the service worker.
+- [x] The thing in the Backrooms (`web/public/monster.js`): tall faceless black figure; pathfinds through the maze (`level.maze` from `makeBackroomsLevel`), stalks two rooms away, flees when looked at, sometimes creeps up behind you (lights out for 1.4 s, then it's gone; no damage). Its own flickering shadow-casting lamp sits behind it. Laboured breathing synthesised with Web Audio (no recordings), 3D-positioned and muffled through walls; captions for it. Console: `br_monster 0` (off), `br_monster_volume`.
+- PENDING (still needs Tripp's OK): Three.js GTAO add-on files for ambient occlusion (lighting upgrade).
 
 ## Tested in the browser (dev mode)
 - Chamber 01 start to finish: shot blue, walked through, came out of the orange portal, reached the exit, server accepted the time.
