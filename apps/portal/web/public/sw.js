@@ -6,7 +6,7 @@
 //   runs / times   internet only (the leaderboard needs the server)
 //
 // Bump VERSION when the list of files below changes.
-const VERSION = "portal-lab-v1";
+const VERSION = "portal-lab-v2";
 
 const FILES = [
   "/",
@@ -24,6 +24,7 @@ const FILES = [
   "/fireraze/lighting.js",
   "/fireraze/physics.js",
   "/fireraze/portals.js",
+  "/fireraze/portalgun.js",
   "/fireraze/postfx.js",
   "/fireraze/textures.js",
   "/fireraze/world.js",

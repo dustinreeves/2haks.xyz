@@ -3,7 +3,8 @@
 import * as THREE from "./vendor/three-0.170.0.module.min.js";
 import {
   applyGravity, castRay, CUBE_HALF, DevConsole, ENGINE, insideBox, moveBody, overlaps, physicsSettings, PortalSystem,
-  BUTTON, DynamicResolution, GamepadInput, LAYERS, makeBackroomsLevel, makeTestSubject, PostFX, setupLighting, World,
+  BUTTON, DynamicResolution, GamepadInput, LAYERS, makeBackroomsLevel, makePortalGun, makeTestSubject, PostFX,
+  setupLighting, World,
 } from "./fireraze/index.js";
 
 const V3 = THREE.Vector3;
@@ -112,106 +113,24 @@ portals.onChange = updateCrosshair;
 
 // ---------- the portal gun ----------
 
-// Portal-gun-style model, built from our own shapes (no copied model): a big rounded white back
-// shell, a dark neck with a glowing glass tube on top, a white front collar, and three long black
-// claws around the emitter. Every glowing part takes the colour of the last portal. Forward is -z.
-const gun = new THREE.Group();
-const gunGlowMat = new THREE.MeshBasicMaterial({ color: BLUE });
-const gunGlowParts = [gunGlowMat];
-let gunGlow; // the emitter tip: beams start here
-{
-  const white = new THREE.MeshPhysicalMaterial({ color: 0xaeb2b6, roughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.4 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x1b1e21, roughness: 0.5, metalness: 0.4 });
-  const grey = new THREE.MeshStandardMaterial({ color: 0x6f777e, roughness: 0.35, metalness: 0.8 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.35 });
-  const glow = () => {
-    const m = new THREE.MeshBasicMaterial({ color: BLUE });
-    gunGlowParts.push(m);
-    return m;
-  };
-  const along = (mesh) => { mesh.rotation.x = Math.PI / 2; return mesh; }; // lathe/cylinder axis → z
-  const lathe = (pts, mat) => along(new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), 40), mat));
-
-  // Back shell: big, round and white (it rests against your arm).
-  const back = lathe([[0, 0.26], [0.05, 0.255], [0.085, 0.235], [0.105, 0.19], [0.11, 0.12], [0.104, 0.05], [0.085, 0.0], [0.06, -0.02]], white);
-  back.scale.set(1, 1, 0.85);
-  gun.add(back);
-
-  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.16), black); // underside handle
-  grip.position.set(0, -0.09, 0.13);
-  gun.add(grip);
-
-  // Neck: dark and narrow, with ribs.
-  const neck = along(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.06, 0.1, 24), black));
-  neck.position.z = -0.06;
-  gun.add(neck);
-  for (const z of [-0.03, -0.06, -0.09]) {
-    const rib = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.006, 6, 24), grey);
-    rib.position.z = z;
-    gun.add(rib);
-  }
-
-  // Glass tube on top, with the glowing core inside, held by two brackets.
-  const tube = along(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 20), glass));
-  tube.position.set(0, 0.085, -0.02);
-  const core = along(new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.18, 12), glow()));
-  core.position.copy(tube.position);
-  gun.add(tube, core);
-  for (const z of [-0.1, 0.06]) {
-    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.04, 0.02), black);
-    bracket.position.set(0, 0.07, z);
-    gun.add(bracket);
-  }
-
-  // Front collar: white, narrowing towards the emitter.
-  const collar = lathe([[0.062, -0.1], [0.075, -0.13], [0.072, -0.18], [0.058, -0.215]], white);
-  gun.add(collar);
-
-  // Emitter: dark ring with a glowing centre.
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 10, 32), black);
-  ring.position.z = -0.218;
-  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.04, 24), glow());
-  lens.position.z = -0.214;
-  lens.rotation.y = Math.PI; // face forward (-z)
-  gun.add(ring, lens);
-
-  // Three long black claws: out, forward, then curling in at the tips.
-  for (let i = 0; i < 3; i++) {
-    const a = (i / 3) * Math.PI * 2 + Math.PI / 2; // one on top, two below
-    const claw = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.02, 0.1), black);
-    base.position.z = -0.05;
-    base.rotation.x = -0.22; // leans outwards
-    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.016, 0.07), black);
-    tip.position.set(0, 0.018, -0.125);
-    tip.rotation.x = 0.55; // curls back in
-    const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), grey);
-    knuckle.position.set(0, 0.024, -0.1);
-    claw.add(base, tip, knuckle);
-    claw.position.set(Math.cos(a) * 0.06, Math.sin(a) * 0.06, -0.19);
-    claw.rotation.z = a - Math.PI / 2;
-    gun.add(claw);
-  }
-
-  gunGlow = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 12), gunGlowMat);
-  gunGlow.position.z = -0.29;
-  gun.add(gunGlow);
-  const tipLight = new THREE.PointLight(BLUE, 0.4, 0.9);
-  tipLight.position.z = -0.3;
-  gun.add(tipLight);
-  gun.userData.tipLight = tipLight;
-  gun.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
-}
+// The portal gun: our own model, built in fireraze/portalgun.js from reference pictures.
+// Every glowing part takes the colour of the last portal. Forward is -z.
+const gunModel = makePortalGun({ color: BLUE });
+const gun = gunModel.group;
+const gunGlow = gunModel.muzzle; // the emitter tip: beams start here
 
 let me = null; // your body (made below, after the gun)
 function setGunColor(color) {
-  for (const m of gunGlowParts) m.color.setHex(color).multiplyScalar(1.5); // brighter than white = glows (bloom)
-  gun.userData.tipLight.color.setHex(color);
+  gunModel.setColor(color);
   if (me) me.setGunColor(color);
 }
 setGunColor(BLUE);
-gun.position.set(0.26, -0.24, -0.56);
-gun.scale.setScalar(0.85);
+// Where the gun sits in front of your eyes, angled in and up a little so you see the barrel and claws.
+const GUN_POS = new V3(0.23, -0.3, -0.5);
+const GUN_TILT = new THREE.Euler(0.3, 0.16, 0);
+gun.position.copy(GUN_POS);
+gun.rotation.copy(GUN_TILT);
+gun.scale.setScalar(0.62);
 camera.add(gun);
 // The gun in front of your eyes is only drawn for your own view; portals show your body instead.
 camera.layers.enable(LAYERS.VIEWMODEL);
@@ -354,6 +273,9 @@ const jimRail = { x: 0, y: 6, zMin: -5, zMax: 5, floor: 0 };
 
 // A ceiling rail along the room, slightly to the left of where you start.
 function buildJimRail(data) {
+  // Jim doesn't follow you into the Backrooms. You're on your own in there.
+  jimRig.visible = data.theme !== "backrooms";
+  if (!jimRig.visible) return;
   const r = data.room;
   const x = THREE.MathUtils.clamp(data.start.pos[0] - 2.5, r.min[0] + 1, r.max[0] - 1);
   Object.assign(jimRail, { x, y: r.max[1] - 0.15, zMin: r.min[2] + 0.8, zMax: r.max[2] - 0.8, floor: r.min[1] });
@@ -1207,13 +1129,13 @@ function frame(realDt, t) {
     if (beamLife <= 0) beam.visible = false;
   }
   recoil = Math.max(0, recoil - dt * 6);
-  gun.position.z = -0.56 + recoil * 0.07;
-  gun.rotation.x = recoil * 0.15;
+  gun.position.z = GUN_POS.z + recoil * 0.07;
+  gun.rotation.x = GUN_TILT.x + recoil * 0.15;
   if (!reducedMotion) {
     // Breathing sway, plus a bob while walking on the ground.
     const walk = player.onGround ? Math.min(1, Math.hypot(player.vel.x, player.vel.z) / WALK_SPEED) : 0;
-    gun.position.y = -0.24 + Math.sin(t * 2) * 0.005 - Math.abs(Math.sin(t * 9)) * 0.012 * walk;
-    gun.position.x = 0.26 + Math.sin(t * 4.5) * 0.008 * walk;
+    gun.position.y = GUN_POS.y + Math.sin(t * 2) * 0.005 - Math.abs(Math.sin(t * 9)) * 0.012 * walk;
+    gun.position.x = GUN_POS.x + Math.sin(t * 4.5) * 0.008 * walk;
   }
 
   if (state.mode === "playing" || state.mode === "loading") {
@@ -1247,7 +1169,7 @@ if (DEV) {
     }
     return { center: player.center.clone(), vel: player.vel.clone(), mode: state.mode };
   };
-  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step, slowmo, startSlowmo, con, gun, pad, me };
+  window.fireraze = { ENGINE, THREE, world, portals, player, state, shoot, toggleHold, resetChamber, held, step, slowmo, startSlowmo, con, gun, pad, me, GUN_POS, GUN_TILT };
   console.info(`${ENGINE.name} ${ENGINE.version} developer mode`);
 }
 

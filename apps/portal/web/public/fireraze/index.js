@@ -12,3 +12,4 @@ export { canvasTexture, TEXTURES, tiledBox } from "./textures.js";
 export { CUBE_HALF, makeBackroomsLevel, World } from "./world.js";
 export { LAYERS, makeTestSubject } from "./character.js";
 export { BUTTON, GamepadInput } from "./gamepad.js";
+export { makePortalGun } from "./portalgun.js";

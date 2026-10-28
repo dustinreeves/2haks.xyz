@@ -28,6 +28,10 @@
 - [x] Secret Backrooms: clip out of a chamber into the void (or `noclip` out of it) and you land in "Level 0", a new random yellow maze each time (`makeBackroomsLevel` in `fireraze/world.js`: wallpaper, damp carpet, office ceiling, flickering lights, haze). The green EXIT takes you back to the start of the chamber you left. The run keeps going (still official).
 - NOTE: portal clipping is ON PURPOSE (Tripp asked to keep it): `PortalSystem.holes()` only checks the body's middle, so your head can slip into the wall around a portal and out into the void. That's the way into the Backrooms. Please don't "fix" it without asking Tripp.
 
+- [x] New portal gun model `fireraze/portalgun.js` (our own build from shapes, modelled by eye from reference pictures on the Portal wiki; no copied model/textures): egg-shaped white shell with seams and a top indicator light, chin scoop, chunky barrel with hex nut, muzzle rings and slotted collar, glass core tube, three long spidery claws with elbows/paddles and cables. First-person pose tuned in `game.js` (`GUN_POS`, `GUN_TILT`, adjustable in ?dev via `fireraze.GUN_POS`)
+- [x] Jim stays out of the Backrooms
+- PENDING (waiting for Tripp's OK to download): CC0 textures from ambientCG (MetalPlates008, Concrete031, PaintedPlaster017, OfficeCeiling001, OfficeCeiling005, Carpet016, Wallpaper001A) and Three.js GTAO add-on files for ambient occlusion. Optional: "Raygun" by Gabriel Valdivia (CC-BY 3.0, poly.pizza) as a second gun, needs credit. No free-licensed portal gun model exists online (checked poly.pizza, OpenGameArt, CGTrader).
+
 ## Tested in the browser (dev mode)
 - Chamber 01 start to finish: shot blue, walked through, came out of the orange portal, reached the exit, server accepted the time.
 - Chamber 02: portals to the ledge, picked up the cube, carried it down; the button opened the door.
