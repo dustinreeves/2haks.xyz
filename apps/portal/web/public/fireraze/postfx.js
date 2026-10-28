@@ -1,11 +1,15 @@
 // Fire Raze engine: effects applied to the finished picture ("post-processing").
 //
-//   scene ─► render (HDR, 4× anti-aliasing) ─► bloom ─► tone map + sRGB ─► colour grade + vignette ─► screen
+//   scene ─► render (HDR, 4× anti-aliasing) ─► ambient occlusion ─► bloom ─► tone map + sRGB ─► grade ─► screen
+//
+// Ambient occlusion (GTAO): corners, edges and the floor under things get soft shade, because less
+// light reaches them in real life.
 //
 // Bloom: anything brighter than white (lamps, portal rims, glowing eyes) softly glows and spills.
 // Grade: a slightly cool, clean Portal-2-style look, a touch of contrast, and darker corners.
 import * as THREE from "../vendor/three-0.170.0.module.min.js";
 import { EffectComposer } from "../vendor/three-addons/postprocessing/EffectComposer.js";
+import { GTAOPass } from "../vendor/three-addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "../vendor/three-addons/postprocessing/OutputPass.js";
 import { RenderPass } from "../vendor/three-addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "../vendor/three-addons/postprocessing/ShaderPass.js";
@@ -51,6 +55,11 @@ export class PostFX {
     const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
     this.composer = new EffectComposer(renderer, target);
     this.composer.addPass(new RenderPass(scene, camera));
+    this.ao = new GTAOPass(scene, camera, size.x, size.y);
+    this.ao.updateGtaoMaterial({ radius: 1.0, distanceExponent: 1.2, thickness: 1.5, scale: 1.2, samples: 12 });
+    this.ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, rings: 2, samples: 12 });
+    this.ao.blendIntensity = 1.0;
+    this.composer.addPass(this.ao);
     this.bloom = new UnrealBloomPass(size.clone(), bloom, radius, threshold);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
@@ -67,6 +76,8 @@ export class PostFX {
   }
 
   set bloomEnabled(on) { this.bloom.enabled = on; }
+
+  set aoEnabled(on) { this.ao.enabled = on; }
 
   set vignette(amount) { this.grade.uniforms.uVignette.value = amount; }
 

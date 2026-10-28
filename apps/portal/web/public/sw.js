@@ -6,7 +6,7 @@
 //   runs / times   internet only (the leaderboard needs the server)
 //
 // Bump VERSION when the list of files below changes.
-const VERSION = "portal-lab-v4";
+const VERSION = "portal-lab-v5";
 
 const FILES = [
   "/",
@@ -55,6 +55,10 @@ const FILES = [
   "/textures/wallpaper001a/roughness.jpg",
   "/vendor/three-0.170.0.module.min.js",
   "/vendor/three-addons/postprocessing/EffectComposer.js",
+  "/vendor/three-addons/postprocessing/GTAOPass.js",
+  "/vendor/three-addons/shaders/GTAOShader.js",
+  "/vendor/three-addons/shaders/PoissonDenoiseShader.js",
+  "/vendor/three-addons/math/SimplexNoise.js",
   "/vendor/three-addons/postprocessing/MaskPass.js",
   "/vendor/three-addons/postprocessing/OutputPass.js",
   "/vendor/three-addons/postprocessing/Pass.js",

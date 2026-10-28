@@ -51,7 +51,7 @@ function lightBoxScene() {
  * Ceiling spot lights for a room. Only the first `shadowCount` cast shadows (shadows cost a
  * lot of speed, so we keep them few).
  */
-export function ceilingLights(group, room, { spacing = 6, intensity = 130, shadowCount = 2 } = {}) {
+export function ceilingLights(group, room, { spacing = 6, intensity = 130, shadowCount = 3 } = {}) {
   const lights = [];
   const fixture = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.5, metalness: 0.6 });
   const lamp = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 3 });

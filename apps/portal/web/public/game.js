@@ -500,6 +500,7 @@ con.cvar("mat_fullbright", 0, {
   onChange: (v) => { fullbright.visible = !!v; },
 });
 con.cvar("sv_portal_placement_never_fail", 0, { help: "Portals stick to any surface.", cheat: true, min: 0, max: 1 });
+con.cvar("mat_ambient_occlusion", 1, { help: "Soft shade in corners and under things (turn off if the game is slow).", min: 0, max: 1, onChange: (v) => { postfx.aoEnabled = !!v; } });
 con.cvar("mat_disable_bloom", 0, { help: "Turn off the glow around bright lights.", min: 0, max: 1, onChange: (v) => { postfx.bloomEnabled = !v; } });
 con.cvar("mat_vignette", 1, { help: "Darker screen corners.", min: 0, max: 1, onChange: (v) => { postfx.vignette = v ? 0.35 : 0; } });
 con.cvar("mat_postprocess_enable", 1, { help: "All picture effects (bloom, colour grade).", min: 0, max: 1, onChange: (v) => { postfx.enabled = !!v; } });

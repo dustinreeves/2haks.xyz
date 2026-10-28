@@ -9,6 +9,7 @@ const V3 = THREE.Vector3;
 export const PORTAL_W = 1.2;
 export const PORTAL_H = 2.0;
 const ROT_Y_PI = new THREE.Matrix4().makeRotationY(Math.PI);
+const PORTAL_THROUGH_LIGHT = new THREE.Color(0xfff2dc);
 
 const vertexShader = `
   varying vec2 vUv;
@@ -102,7 +103,7 @@ export class PortalSystem {
 
     this.scene.add(mesh);
     return {
-      name, color, rts, mat, mesh, specks, placed: false, fixed: false, open: 1,
+      name, color, rts, mat, mesh, specks, light, placed: false, fixed: false, open: 1,
       pos: new V3(), normal: new V3(), up: new V3(), right: new V3(),
       matrix: new THREE.Matrix4(), inv: new THREE.Matrix4(), hosts: [],
     };
@@ -271,6 +272,11 @@ export class PortalSystem {
       p.mat.uniforms.uTime.value = t;
       p.open = Math.min(1, p.open + dt * 5); // ~0.2 s to open
       p.mat.uniforms.uOpen.value = 1 - (1 - p.open) ** 3;
+      // Light through the portal: when linked, the other room's (warm white) light spills out too.
+      const through = this.linked ? 0.55 : 0;
+      p.light.color.setHex(p.color).lerp(PORTAL_THROUGH_LIGHT, through);
+      p.light.intensity = (4 + through * 6) * p.mat.uniforms.uOpen.value;
+      p.light.distance = 3.5 + through * 2.5;
       if (!p.mesh.visible) continue;
       // Specks circle the rim and drift a little way out, then start again.
       const pos = p.specks.geometry.attributes.position;

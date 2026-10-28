@@ -34,7 +34,7 @@
 
 - [x] CC0 photo textures (ambientCG, downloaded with Tripp's OK): `web/public/textures/` (+ LICENSE.txt), loaded by `photoSet()`/`PHOTO` in `fireraze/textures.js`. Metal walls, concrete floors, emissive ceiling panels, Backrooms wallpaper/carpet/office ceiling. Tripp's white tile design kept (with plaster roughness). Cached by the service worker.
 - [x] The thing in the Backrooms (`web/public/monster.js`): tall faceless black figure; pathfinds through the maze (`level.maze` from `makeBackroomsLevel`), stalks two rooms away, flees when looked at, sometimes creeps up behind you (lights out for 1.4 s, then it's gone; no damage). Its own flickering shadow-casting lamp sits behind it. Laboured breathing synthesised with Web Audio (no recordings), 3D-positioned and muffled through walls; captions for it. Console: `br_monster 0` (off), `br_monster_volume`.
-- PENDING (still needs Tripp's OK): Three.js GTAO add-on files for ambient occlusion (lighting upgrade).
+- [x] Lighting: GTAO ambient occlusion (vendored add-ons, cvar `mat_ambient_occlusion`), 3 shadow-casting ceiling lights per chamber, linked portals also give off the other side's warm light.
 
 ## Tested in the browser (dev mode)
 - Chamber 01 start to finish: shot blue, walked through, came out of the orange portal, reached the exit, server accepted the time.
