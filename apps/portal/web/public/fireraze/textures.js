@@ -419,6 +419,35 @@ const door = surface({
   },
 });
 
+// ---------- photo textures (CC0, from ambientCG; see textures/LICENSE.txt) ----------
+// Each set lives in textures/<id>/ as color.jpg, normal.jpg, roughness.jpg and sometimes
+// metalness.jpg / emission.jpg. They load in the background; materials update when ready.
+const loader = new THREE.TextureLoader();
+
+export function photoSet(id, { metalness = false, emission = false } = {}) {
+  const load = (name, srgb) => {
+    const tex = loader.load(`textures/${id}/${name}.jpg`);
+    if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 8;
+    return tex;
+  };
+  const maps = { map: load("color", true), normalMap: load("normal", false), roughnessMap: load("roughness", false) };
+  if (metalness) maps.metalnessMap = load("metalness", false);
+  if (emission) maps.emissiveMap = load("emission", true);
+  return maps;
+}
+
+export const PHOTO = {
+  metalPlates: photoSet("metalplates008", { metalness: true }),
+  concrete: photoSet("concrete031"),
+  plaster: photoSet("paintedplaster017"),
+  ceiling: photoSet("officeceiling001", { emission: true }),
+  officeCeiling: photoSet("officeceiling005", { emission: true }),
+  carpet: photoSet("carpet016"),
+  wallpaper: photoSet("wallpaper001a"),
+};
+
 export const TEXTURES = { white, metal, floor, ceiling, cube, door, wallpaper, carpet, officeCeiling };
 
 // A box whose texture repeats every `tile` metres instead of stretching.

@@ -1,0 +1,3 @@
+Textures in this folder come from ambientCG (https://ambientcg.com), licensed CC0 1.0 Universal
+(public domain, free for any use, no credit required). Re-saved at 1024 px, JPEG quality 80.
+Asset ids: MetalPlates008, Concrete031, PaintedPlaster017, OfficeCeiling001, OfficeCeiling005, Carpet016, Wallpaper001A.

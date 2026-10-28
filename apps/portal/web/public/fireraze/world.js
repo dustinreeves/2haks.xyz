@@ -4,17 +4,19 @@ import * as THREE from "../vendor/three-0.170.0.module.min.js";
 import { box3, overlaps } from "./collide.js";
 import { applyGravity, moveBody } from "./physics.js";
 import { ceilingLights } from "./lighting.js";
-import { canvasTexture, TEXTURES, tiledBox } from "./textures.js";
+import { canvasTexture, PHOTO, TEXTURES, tiledBox } from "./textures.js";
 
 const V3 = THREE.Vector3;
 export const CUBE_HALF = new V3(0.3, 0.3, 0.3);
 
 const MATS = {
-  white: new THREE.MeshStandardMaterial({ ...TEXTURES.white, roughness: 0.75 }),
+  // Tripp's tile design (colour + crack/seam bumps), with real plaster shininess from a photo texture.
+  white: new THREE.MeshStandardMaterial({ ...TEXTURES.white, roughnessMap: PHOTO.plaster.roughnessMap, roughness: 0.9 }),
   // Low metalness on purpose: fully metallic surfaces only reflect, and look black in a dim room.
-  metal: new THREE.MeshStandardMaterial({ ...TEXTURES.metal, roughness: 0.6, metalness: 0.12 }),
-  floor: new THREE.MeshStandardMaterial({ ...TEXTURES.floor, roughness: 0.85, metalness: 0.1 }),
-  ceiling: new THREE.MeshStandardMaterial({ ...TEXTURES.ceiling, roughness: 0.8, metalness: 0.05 }),
+  // Photo textures (CC0, ambientCG). The colour multiplies the photo, so these darken/tint it.
+  metal: new THREE.MeshStandardMaterial({ ...PHOTO.metalPlates, color: 0xa7adb3, roughness: 1, metalness: 0.3 }),
+  floor: new THREE.MeshStandardMaterial({ ...PHOTO.concrete, color: 0xc4c8cc, roughness: 1 }),
+  ceiling: new THREE.MeshStandardMaterial({ ...PHOTO.ceiling, roughness: 1, emissive: 0xffffff, emissiveIntensity: 1.2 }),
   glass: new THREE.MeshStandardMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false }),
 };
 const plainVertex = `
@@ -61,9 +63,9 @@ const FACES = {
   glass: [MATS.glass, MATS.glass, MATS.glass],
   // The Backrooms: wallpaper walls, carpet floors, office-tile ceilings.
   backrooms: [
-    new THREE.MeshStandardMaterial({ ...TEXTURES.wallpaper, roughness: 0.9 }),
-    new THREE.MeshStandardMaterial({ ...TEXTURES.carpet, roughness: 1 }),
-    new THREE.MeshStandardMaterial({ ...TEXTURES.officeCeiling, roughness: 0.9 }),
+    new THREE.MeshStandardMaterial({ ...PHOTO.wallpaper, color: 0xe6cf80, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ ...PHOTO.carpet, color: 0xe0cc95, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ ...PHOTO.officeCeiling, roughness: 1, emissive: 0xfff4d6, emissiveIntensity: 1.6 }),
   ],
 };
 const BUTTON_BASE = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6 });
@@ -828,13 +830,18 @@ export function makeBackroomsLevel(seed = Math.floor(Math.random() * 1e9)) {
     stack.push([a, b]);
   }
   const boxes = [];
+  // Which walls are still standing after knocking some down (so creatures can find their way).
+  const wallE = Array.from({ length: N }, () => Array(N).fill(false));
+  const wallS = Array.from({ length: N }, () => Array(N).fill(false));
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < N; j++) {
       if (i < N - 1 && east[i][j] && rand() > 0.3) {
+        wallE[i][j] = true;
         const x = (i + 1) * CELL;
         boxes.push({ min: [x - T, 0, j * CELL - T], max: [x + T, H, (j + 1) * CELL + T], type: "backrooms" });
       }
       if (j < N - 1 && south[i][j] && rand() > 0.3) {
+        wallS[i][j] = true;
         const z = (j + 1) * CELL;
         boxes.push({ min: [i * CELL - T, 0, z - T], max: [(i + 1) * CELL + T, H, z + T], type: "backrooms" });
       }
@@ -860,5 +867,8 @@ export function makeBackroomsLevel(seed = Math.floor(Math.random() * 1e9)) {
     goo: [],
     fizzlers: [],
     exit: { min: [far - CELL + 0.6, 0, far - CELL + 0.6], max: [far - 0.6, 2.6, far - 0.6] },
+    // Maze layout: cell (i, j) spans x in [i*cell, (i+1)*cell], z in [j*cell, (j+1)*cell].
+    // wallE[i][j] = wall between (i, j) and (i+1, j); wallS[i][j] = wall between (i, j) and (i, j+1).
+    maze: { n: N, cell: CELL, wallE, wallS },
   };
 }

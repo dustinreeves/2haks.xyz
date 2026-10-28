@@ -6,7 +6,7 @@
 //   runs / times   internet only (the leaderboard needs the server)
 //
 // Bump VERSION when the list of files below changes.
-const VERSION = "portal-lab-v2";
+const VERSION = "portal-lab-v3";
 
 const FILES = [
   "/",
@@ -28,6 +28,30 @@ const FILES = [
   "/fireraze/postfx.js",
   "/fireraze/textures.js",
   "/fireraze/world.js",
+  "/textures/carpet016/color.jpg",
+  "/textures/carpet016/normal.jpg",
+  "/textures/carpet016/roughness.jpg",
+  "/textures/concrete031/color.jpg",
+  "/textures/concrete031/normal.jpg",
+  "/textures/concrete031/roughness.jpg",
+  "/textures/metalplates008/color.jpg",
+  "/textures/metalplates008/metalness.jpg",
+  "/textures/metalplates008/normal.jpg",
+  "/textures/metalplates008/roughness.jpg",
+  "/textures/officeceiling001/color.jpg",
+  "/textures/officeceiling001/emission.jpg",
+  "/textures/officeceiling001/normal.jpg",
+  "/textures/officeceiling001/roughness.jpg",
+  "/textures/officeceiling005/color.jpg",
+  "/textures/officeceiling005/emission.jpg",
+  "/textures/officeceiling005/normal.jpg",
+  "/textures/officeceiling005/roughness.jpg",
+  "/textures/paintedplaster017/color.jpg",
+  "/textures/paintedplaster017/normal.jpg",
+  "/textures/paintedplaster017/roughness.jpg",
+  "/textures/wallpaper001a/color.jpg",
+  "/textures/wallpaper001a/normal.jpg",
+  "/textures/wallpaper001a/roughness.jpg",
   "/vendor/three-0.170.0.module.min.js",
   "/vendor/three-addons/postprocessing/EffectComposer.js",
   "/vendor/three-addons/postprocessing/MaskPass.js",
