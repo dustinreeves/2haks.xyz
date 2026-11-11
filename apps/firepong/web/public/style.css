@@ -104,6 +104,43 @@ canvas#scene {
   color: var(--muted);
 }
 
+#tiltpads {
+  position: absolute;
+  inset: auto 0 0.8rem 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1rem;
+  pointer-events: none;
+}
+.pad {
+  display: grid;
+  grid-template-columns: repeat(3, 3.6rem);
+  grid-template-rows: repeat(2, 3.6rem);
+  gap: 0.35rem;
+  pointer-events: auto;
+}
+.pad[hidden] { display: none; }
+.pad button:nth-child(1) { grid-area: 1 / 2; }
+.pad button:nth-child(2) { grid-area: 2 / 1; }
+.pad button:nth-child(3) { grid-area: 2 / 3; }
+.pad button:nth-child(4) { grid-area: 2 / 2; }
+.pad button {
+  font-size: 1.3rem;
+  color: var(--text);
+  background: rgba(30, 40, 70, 0.6);
+  border: 2px solid rgba(179, 136, 255, 0.6);
+  border-radius: 12px;
+  touch-action: none;
+  user-select: none;
+}
+.pad button.down { background: rgba(179, 136, 255, 0.55); }
+#tiltpads:has(#pad1[hidden]) { justify-content: flex-end; }
+@media (max-width: 440px) {
+  #tiltpads { padding: 0 0.5rem; }
+  .pad { grid-template-columns: repeat(3, 2.9rem); grid-template-rows: repeat(2, 2.9rem); gap: 0.25rem; }
+  .pad button { font-size: 1.1rem; border-radius: 10px; }
+}
+
 .panel {
   position: fixed;
   top: 50%;

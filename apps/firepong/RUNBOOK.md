@@ -123,7 +123,7 @@ docker compose start api
 
 ## Tilt (gravity)
 
-The arrow keys tilt the board up to 7 degrees; the ball rolls downhill (`applyGravity` in `pong.js`, numbers in the `TILT` constant: gravity 7 m/s², energy drains 0.4/s and refills 0.22/s, locked until 30% after running dry).
+Everybody can tilt the board (keys, controller right stick, or on-screen buttons; see Controls), up to 7 degrees; the ball rolls downhill (`applyGravity` in `pong.js`, numbers in the `TILT` constant: gravity 7 m/s², energy drains 0.4/s and refills 0.22/s, locked until 30% after running dry).
 - Each player has an energy meter (TILT bar under the score) so nobody can hold the board tilted for ever. When two players tilt at once their tilts add up.
 - The computer tilts too on normal (50% strength) and hard (90%): while the ball heads for you, it leans the board so the ball drifts away from your paddle. Easy never tilts.
 - The ball is kept between 3 m/s and 1.25 x the top speed, and can never roll straight up and down (it keeps at least a 0.2 forward share).
@@ -131,8 +131,10 @@ The arrow keys tilt the board up to 7 degrees; the ball rolls downhill (`applyGr
 
 ## Controls
 
-- **Play the computer:** W / S move. ← ↑ ↓ → tilt the board. Space (or Enter) lets go of a magnet-caught ball.
-- **Two players:** Player 1 W / S (Space), Player 2 I / K (Enter). Both can use the arrows to tilt.
-- **Touch or mouse:** press and drag on the table to move your paddle (no tilt on touch yet). In two-player mode the left half of the screen is Player 1 and the right half is Player 2.
+- **Play the computer:** W / S move. ← ↑ ↓ → (or A / D left-right, Q / E up-down) tilt the board. Space (or Enter) lets go of a magnet-caught ball.
+- **Two players:** every player has their own paddle and tilt keys, and their own TILT meter.
+  Player 1: W / S move, A / D / Q / E tilt, Space lets go. Player 2: I / K move, J / L / U / O (or the arrows) tilt, Enter lets go.
+  Tilt directions are the same for everybody (right = towards the right goal), and the tilts of both players add up.
+- **Touch or mouse:** press and drag on the table to move your paddle. On touch screens (`pointer: coarse`) on-screen ▲ ◀ ▶ ▼ buttons tilt the board: one pad bottom-right against the computer, two pads (left = Player 1, right = Player 2) in two-player mode. In two-player mode the left half of the screen drags Player 1's paddle and the right half Player 2's.
 - **Controller:** left stick or D-pad moves, right stick tilts, ✕ / R1 / R2 lets go of the magnet, Options pauses.
 - **P / Esc** pause, **M** sound on/off.

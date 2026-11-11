@@ -582,8 +582,18 @@ function readInput() {
     input.release[0] = keys.has("Space");
     input.release[1] = keys.has("Enter");
   }
-  // Arrow keys tilt the board (in two-player mode both players share them).
-  input.tilt[0] = [axis(["ArrowLeft"], ["ArrowRight"]), axis(["ArrowUp"], ["ArrowDown"])];
+  // Everybody can tilt the board. Against the computer the arrows and A / D / Q / E all tilt for you.
+  // With two players: Player 1 A / D (left / right) and Q / E (up / down); Player 2 J / L and U / O, or the arrows.
+  if (view.mode === "ai") {
+    input.tilt[0] = [axis(["ArrowLeft", "KeyA"], ["ArrowRight", "KeyD"]), axis(["ArrowUp", "KeyQ"], ["ArrowDown", "KeyE"])];
+  } else {
+    input.tilt[0] = [axis(["KeyA"], ["KeyD"]), axis(["KeyQ"], ["KeyE"])];
+    input.tilt[1] = [axis(["KeyJ", "ArrowLeft"], ["KeyL", "ArrowRight"]), axis(["KeyU", "ArrowUp"], ["KeyO", "ArrowDown"])];
+  }
+  // On-screen tilt buttons (phones and tablets).
+  for (let p = 0; p < 2; p++) {
+    if (input.tilt[p][0] === 0 && input.tilt[p][1] === 0) input.tilt[p] = [touchTilt[p][0], touchTilt[p][1]];
+  }
   if (gamepad.connected) {
     const stick = gamepad.move.y;
     const dpad = (gamepad.down.has(BUTTON.DOWN) ? 1 : 0) - (gamepad.down.has(BUTTON.UP) ? 1 : 0);
@@ -637,7 +647,35 @@ for (const type of ["pointerup", "pointercancel"]) {
   });
 }
 
-const GAME_KEYS = new Set(["KeyW", "KeyS", "KeyI", "KeyK", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter"]);
+const GAME_KEYS = new Set([
+  "KeyW", "KeyS", "KeyA", "KeyD", "KeyQ", "KeyE", "KeyI", "KeyK", "KeyJ", "KeyL", "KeyU", "KeyO",
+  "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter",
+]);
+
+// On-screen tilt buttons: each one holds a direction while it is pressed.
+const touchTilt = [[0, 0], [0, 0]];
+const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+for (const button of document.querySelectorAll("#tiltpads button")) {
+  const p = Number(button.dataset.p);
+  const dir = [Number(button.dataset.dx), Number(button.dataset.dz)];
+  const press = (e) => {
+    e.preventDefault();
+    try {
+      button.setPointerCapture(e.pointerId);     // keep getting events if the finger slides off the button
+    } catch {
+      // not fatal: the button still works while the finger stays on it
+    }
+    touchTilt[p] = dir;
+    button.classList.add("down");
+  };
+  const release = () => {
+    if (touchTilt[p] === dir) touchTilt[p] = [0, 0];
+    button.classList.remove("down");
+  };
+  button.addEventListener("pointerdown", press);
+  button.addEventListener("pointerup", release);
+  button.addEventListener("pointercancel", release);
+}
 window.addEventListener("keydown", (e) => {
   if (e.target instanceof HTMLInputElement) return;      // typing a nickname
   if (e.code === "KeyM") { sfx.muted = !sfx.muted; showToast(sfx.muted ? "Sound off" : "Sound on", "#ffffff"); return; }
@@ -691,8 +729,12 @@ function startMatch() {
   showPanel(null);
   $("hud").hidden = false;
   $("hint").textContent = view.mode === "ai"
-    ? "W / S move · ← ↑ ↓ → tilt the board · Space lets go of the magnet · P pause · M sound"
-    : "Player 1: W / S (Space) · Player 2: I / K (Enter) · ← ↑ ↓ → tilt the board for both · P pause";
+    ? "W / S move · ← ↑ ↓ → (or A D Q E) tilt the board · Space lets go of the magnet · P pause · M sound"
+    : "P1: W/S move, A/D/Q/E tilt, Space · P2: I/K move, J/L/U/O (or arrows) tilt, Enter · P pause";
+  touchTilt[0] = [0, 0];
+  touchTilt[1] = [0, 0];
+  $("tiltpads").hidden = !coarsePointer;
+  $("pad1").hidden = view.mode !== "local";
   document.activeElement?.blur();
 }
 

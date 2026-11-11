@@ -20,12 +20,26 @@
     <p id="banner" aria-live="polite"></p>
     <p id="toast" aria-live="polite"></p>
     <p id="hint"></p>
+    <div id="tiltpads" hidden aria-label="Tilt buttons">
+      <div class="pad" id="pad0" aria-label="Player 1 tilt">
+        <button type="button" data-p="0" data-dx="0" data-dz="-1" aria-label="Tilt up">▲</button>
+        <button type="button" data-p="0" data-dx="-1" data-dz="0" aria-label="Tilt left">◀</button>
+        <button type="button" data-p="0" data-dx="1" data-dz="0" aria-label="Tilt right">▶</button>
+        <button type="button" data-p="0" data-dx="0" data-dz="1" aria-label="Tilt down">▼</button>
+      </div>
+      <div class="pad" id="pad1" aria-label="Player 2 tilt" hidden>
+        <button type="button" data-p="1" data-dx="0" data-dz="-1" aria-label="Tilt up">▲</button>
+        <button type="button" data-p="1" data-dx="-1" data-dz="0" aria-label="Tilt left">◀</button>
+        <button type="button" data-p="1" data-dx="1" data-dz="0" aria-label="Tilt right">▶</button>
+        <button type="button" data-p="1" data-dx="0" data-dz="1" aria-label="Tilt down">▼</button>
+      </div>
+    </div>
   </div>
 
   <section id="start" class="panel">
     <p class="kicker">Fire Raze engine</p>
     <h1>Fire Pong</h1>
-    <p>Pong, but things appear on the table. Hit the ball into a power-up and <strong>you</strong> get it, if you hit the ball last. And you can <strong>tilt the board</strong> with the arrow keys so the ball rolls downhill! Tilting uses up your TILT energy, so use it wisely. First to 7 wins.</p>
+    <p>Pong, but things appear on the table. Hit the ball into a power-up and <strong>you</strong> get it, if you hit the ball last. And <strong>everybody</strong> can <strong>tilt the board</strong> so the ball rolls downhill! Tilting uses up your own TILT energy, so use it wisely. First to 7 wins.</p>
     <div class="row">
       <label for="level">Computer is</label>
       <select id="level">
@@ -46,7 +60,7 @@
     </details>
     <h2>Best wins</h2>
     <ol id="leaderboard" class="leaderboard"><li>Loading…</li></ol>
-    <p class="small">Controls: W / S move your paddle (or drag with a mouse or finger) · ← ↑ ↓ → tilt the board (right stick on a controller). Two players: Player 1 W / S, Player 2 I / K, and both can use the arrows. P pauses, M turns sound off.</p>
+    <p class="small">Against the computer: W / S move your paddle (or drag with a mouse or finger), ← ↑ ↓ → or A / D / Q / E tilt the board (right stick on a controller, buttons on a phone). Two players: Player 1 W / S move, A / D / Q / E tilt. Player 2 I / K move, J / L / U / O (or the arrows) tilt. P pauses, M turns sound off.</p>
   </section>
 
   <section id="pause" class="panel" hidden>
