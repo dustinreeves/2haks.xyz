@@ -17,10 +17,23 @@ export const MAGNET_HOLD = 1.5;
 const MAX_STEP = 1 / 120;       // never move further than this in one go, so fast balls can't skip a paddle
 const MAX_FRAME = 1 / 20;       // a long pause (slow tab) must not make the ball jump
 
+// Tilting the board makes the ball roll downhill. Each player has an energy meter so nobody can
+// hold the board tilted for ever: it drains while you tilt and refills when you let go.
+export const TILT = {
+  gravity: 7,          // ball acceleration at full tilt (m/s^2)
+  follow: 6,           // how quickly the board swings to the new tilt (per second)
+  drain: 0.4,          // meter used per second at full tilt (1 = full meter)
+  regen: 0.22,         // meter refilled per second when not tilting
+  unlockAt: 0.3,       // after running dry you must wait until the meter is back to this
+  maxSpeed: SPEED.max * 1.25,
+  minSpeed: 3,
+  minForward: 0.2,     // the ball can never roll straight up and down for ever
+};
+
 export const AI_LEVELS = {
-  easy:   { react: 0.30, error: 1.5,  speed: 0.60 },
-  normal: { react: 0.15, error: 0.7,  speed: 0.85 },
-  hard:   { react: 0.06, error: 0.25, speed: 1.00 },
+  easy:   { react: 0.30, error: 1.5,  speed: 0.60, tilt: 0 },
+  normal: { react: 0.15, error: 0.7,  speed: 0.85, tilt: 0.5 },
+  hard:   { react: 0.06, error: 0.25, speed: 1.00, tilt: 0.9 },
 };
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -59,6 +72,9 @@ export function newGame({ defs = [], powerups = true, rng = Math.random, target 
     magnet: [0, 0],         // catches left
     magnetLeft: [0, 0],
     portals: null,          // { left, a: {x, z}, b: {x, z} }
+    tilt: { x: 0, z: 0 },   // how far the board is tilted now: -1..1 (+x = towards the right goal, +z = towards you)
+    meter: [1, 1],          // each player's tilt energy
+    tiltLocked: [false, false],
     lastHit: null,
     serveTimer: 1.2,
     serveDir: rng() < 0.5 ? -1 : 1,
@@ -180,6 +196,9 @@ function point(game, scorer, ball) {
   game.magnet = [0, 0];
   game.magnetLeft = [0, 0];
   game.portals = null;
+  game.tilt = { x: 0, z: 0 };
+  game.meter = [1, 1];
+  game.tiltLocked = [false, false];
   game.serveTimer = 1.2;
   game.serveDir = scorer === 0 ? 1 : -1;   // the player who just lost gets the ball
   game.nextSpawn = game.t + 4 + game.rng() * 3;
@@ -210,6 +229,52 @@ function paddleHit(game, ball, p) {
   }
 }
 
+/** The ball rolls downhill: add the tilt to its velocity, then keep its speed and direction sensible. */
+function applyGravity(game, ball, h) {
+  const { x: tx, z: tz } = game.tilt;
+  if (tx === 0 && tz === 0) return;
+  let vx = ball.dx * ball.speed + tx * TILT.gravity * h;
+  let vz = ball.dz * ball.speed + tz * TILT.gravity * h;
+  const speed = clamp(Math.hypot(vx, vz), TILT.minSpeed, TILT.maxSpeed);
+  const len = Math.hypot(vx, vz) || 1;
+  vx /= len;
+  vz /= len;
+  if (Math.abs(vx) < TILT.minForward) {
+    vx = TILT.minForward * (vx < 0 || (vx === 0 && ball.dx < 0) ? -1 : 1);
+    const rest = Math.sqrt(1 - vx * vx);
+    vz = rest * (vz < 0 ? -1 : 1);
+  }
+  ball.dx = vx;
+  ball.dz = vz;
+  ball.speed = speed;
+}
+
+/** Work out the board's tilt from both players' tilt keys, using up their energy meters. */
+function updateTilt(game, h, input) {
+  let sumX = 0;
+  let sumZ = 0;
+  for (let p = 0; p < 2; p++) {
+    const [rx, rz] = (input.tilt && input.tilt[p]) || [0, 0];
+    const want = Math.min(1, Math.hypot(rx, rz));
+    if (want > 0 && !game.tiltLocked[p]) {
+      game.meter[p] = Math.max(0, game.meter[p] - TILT.drain * want * h);
+      if (game.meter[p] === 0) game.tiltLocked[p] = true;
+      sumX += clamp(rx, -1, 1);
+      sumZ += clamp(rz, -1, 1);
+    } else {
+      game.meter[p] = Math.min(1, game.meter[p] + TILT.regen * h);
+      if (game.tiltLocked[p] && game.meter[p] >= TILT.unlockAt) game.tiltLocked[p] = false;
+    }
+  }
+  const len = Math.hypot(sumX, sumZ);
+  if (len > 1) { sumX /= len; sumZ /= len; }
+  const k = Math.min(1, TILT.follow * h);
+  game.tilt.x += (sumX - game.tilt.x) * k;
+  game.tilt.z += (sumZ - game.tilt.z) * k;
+  if (Math.abs(game.tilt.x) < 1e-4) game.tilt.x = 0;
+  if (Math.abs(game.tilt.z) < 1e-4) game.tilt.z = 0;
+}
+
 function stepBall(game, ball, h, input) {
   if (ball.stuck !== null) {
     const p = ball.stuck;
@@ -228,6 +293,7 @@ function stepBall(game, ball, h, input) {
     return null;
   }
 
+  applyGravity(game, ball, h);
   const v = ball.speed * ballFactor(game);
   ball.x += ball.dx * v * h;
   ball.z += ball.dz * v * h;
@@ -294,6 +360,7 @@ export function step(game, dt, input) {
 
 function substep(game, h, input) {
   game.t += h;
+  updateTilt(game, h, input);
 
   for (let p = 0; p < 2; p++) {
     const pad = game.paddles[p];
@@ -390,5 +457,14 @@ export function aiInput(game, side, level, mem, dt) {
   const diff = mem.target - pad.z;
   const move = clamp(diff / 0.6, -1, 1) * cfg.speed;
   const holding = game.balls.some((b) => b.stuck === side && b.stuckT < MAGNET_HOLD - 0.7);
-  return { move, release: holding };
+
+  // Tilt: while the ball rolls towards the other player, lean the board so it drifts away from their paddle.
+  let tilt = [0, 0];
+  if (cfg.tilt > 0 && !game.over) {
+    const foe = game.paddles[1 - side];
+    const toward = side === 0 ? -1 : 1;           // the dx sign that heads for the computer
+    const ball = game.balls.find((b) => b.stuck === null && b.dx * toward < 0 && Math.abs(b.x - foe.x) > 2);
+    if (ball) tilt = [0, clamp((ball.z - foe.z) / 1.5, -1, 1) * cfg.tilt];
+  }
+  return { move, release: holding, tilt };
 }

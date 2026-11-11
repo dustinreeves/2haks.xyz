@@ -45,6 +45,13 @@ canvas#scene {
 #side0 .name, #side0 .score { color: var(--blue); text-shadow: 0 0 18px rgba(76, 201, 240, 0.6); }
 #side1 .name, #side1 .score { color: var(--orange); text-shadow: 0 0 18px rgba(255, 140, 26, 0.6); }
 
+.meterbox { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.15em; color: var(--muted); }
+#side1 .meterbox { flex-direction: row-reverse; }
+.meter { width: 7rem; height: 0.5rem; border-radius: 999px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.meter > div { height: 100%; background: #b388ff; transition: width 0.1s linear; }
+.meterbox.locked .meter > div { background: #ff4d6d; }
+.meterbox.locked { color: #ff4d6d; }
+
 .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; max-width: 16rem; }
 #side1 .chips { justify-content: flex-end; }
 .chip {

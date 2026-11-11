@@ -1,6 +1,6 @@
 # PROJECT_STATE: firepong (Fire Pong)
 
-**Last worked on by:** Tripp (with Claude), 2026-11-10
+**Last worked on by:** Tripp (with Claude), 2026-11-10 (tilt mechanic added)
 
 ## Progress
 - [x] Rules in `web/public/pong.js` (no graphics): table, paddles, ball speed-up and hit angles, scoring to 7, serve, computer player (easy / normal / hard)
@@ -10,6 +10,7 @@
 - [x] CLI `firepong` (powerups / show / leaderboard / validate)
 - [x] Docker (8901/8902, hardened like portal), Caddy block appended after a timestamped backup, PORTS.md rows, showcase card
 - [x] `?dev` mode (`firepong.step()`, `firepong.spawn()`)
+- [x] 2026-11-10: **Tilt mechanic.** Arrow keys (right stick on a controller) tilt the whole board (`board` group in `game.js`, up to 7 degrees) and the ball rolls downhill (`applyGravity` / `updateTilt` in `pong.js`). Each player has an energy meter (TILT bar). The computer tilts on normal/hard. Paddle keys changed: W / S for player 1, I / K for player 2 (the arrows are now tilt). Rules checked in the page: direction, meter lock/refill, no vertical lock, 900 s of hard-vs-hard with tilt without NaN
 
 ## Tested in the browser
 - Menu, a computer match, power-up items with labels and status chips, portals, shield, win screen, saving a win to the leaderboard (the test row was deleted afterwards).
@@ -18,6 +19,8 @@
 
 ## Next steps
 - Hand play-test and tune: ball speed, paddle speed, how often power-ups appear, how hard "hard" is (two hard computers almost never score on each other)
+- Hand play-test the tilt: is 7 m/s² too strong or weak? Does the meter drain too fast? How does the computer's tilt feel on normal / hard?
+- Tilt on phones (device orientation or on-screen buttons)
 - A test file for `pong.js` (needs Node or a browser test page; neither is on the server)
 - Online two-player matches (WebSocket), if wanted
 - More power-ups (see "Making a new power-up" in RUNBOOK.md)

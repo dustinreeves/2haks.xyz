@@ -96,13 +96,18 @@ const glow = (color, intensity) => new THREE.MeshStandardMaterial({
 const HL = TABLE.halfLength;
 const HW = TABLE.halfWidth;
 
+// Everything on the table lives in this group, so tilting the board tilts it all together.
+const board = new THREE.Group();
+scene.add(board);
+const MAX_TILT_ANGLE = (7 * Math.PI) / 180;
+
 const base = new THREE.Mesh(
   new THREE.BoxGeometry(HL * 2 + 1.6, 0.6, HW * 2 + 1.6),
   new THREE.MeshStandardMaterial({ color: 0x1a1f30, roughness: 0.5, metalness: 0.7 }),
 );
 base.position.y = -0.31;
 base.receiveShadow = true;
-scene.add(base);
+board.add(base);
 
 const top = new THREE.Mesh(
   new THREE.PlaneGeometry(HL * 2, HW * 2),
@@ -110,16 +115,16 @@ const top = new THREE.Mesh(
 );
 top.rotation.x = -Math.PI / 2;
 top.receiveShadow = true;
-scene.add(top);
+board.add(top);
 
 // Glowing rails along the long sides and coloured goal strips at the ends.
 for (const s of [-1, 1]) {
   const rail = new THREE.Mesh(new THREE.BoxGeometry(HL * 2 + 0.8, 0.3, 0.3), glow(0x6ea8ff, 0.9));
   rail.position.set(0, 0.15, s * (HW + 0.15));
-  scene.add(rail);
+  board.add(rail);
   const goal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, HW * 2), glow(PLAYER_COLORS[s === -1 ? 0 : 1], 1.2));
   goal.position.set(s * (HL + 0.1), 0.1, 0);
-  scene.add(goal);
+  board.add(goal);
 }
 
 const keyLight = new THREE.SpotLight(0xdfe9ff, 1500, 0, 0.8, 0.8, 2);
@@ -137,7 +142,7 @@ const paddleMeshes = [0, 1].map((i) => {
   const m = new THREE.Mesh(new THREE.BoxGeometry(PADDLE.halfThick * 2, 0.4, 2), glow(PLAYER_COLORS[i], 1.8));
   m.castShadow = true;
   m.position.y = 0.2;
-  scene.add(m);
+  board.add(m);
   return m;
 });
 
@@ -146,7 +151,7 @@ ballMaterial.color.set(0xffffff);
 const ballGeometry = new THREE.SphereGeometry(BALL_R, 24, 16);
 const ballMeshes = [];
 const ballLight = new THREE.PointLight(0xffffff, 2.5, 5, 2);
-scene.add(ballLight);
+board.add(ballLight);
 
 const shieldMeshes = [0, 1].map((i) => {
   const m = new THREE.Mesh(
@@ -156,7 +161,7 @@ const shieldMeshes = [0, 1].map((i) => {
   );
   m.position.set(i === 0 ? -HL + 0.1 : HL - 0.1, 0.35, 0);
   m.visible = false;
-  scene.add(m);
+  board.add(m);
   return m;
 });
 
@@ -171,7 +176,7 @@ const portalMeshes = [0x2d7dff, 0xff8c1a].map((color) => {
   g.rotation.x = -Math.PI / 2;
   g.position.y = 0.06;
   g.visible = false;
-  scene.add(g);
+  board.add(g);
   return g;
 });
 
@@ -227,7 +232,7 @@ function syncItems(game, time) {
       label.position.y = 1.15;
       group.add(body, ring, label);
       group.userData.body = body;
-      scene.add(group);
+      board.add(group);
       itemMeshes.set(item.id, group);
     }
     group.position.set(item.x, 0.65 + Math.sin(time * 3 + item.id) * 0.1, item.z);
@@ -237,7 +242,7 @@ function syncItems(game, time) {
   }
   for (const [id, group] of itemMeshes) {
     if (!seen.has(id)) {
-      scene.remove(group);
+      board.remove(group);
       itemMeshes.delete(id);
     }
   }
@@ -262,7 +267,7 @@ class Sparks {
       size: 0.22, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
     }));
     this.points.frustumCulled = false;
-    scene.add(this.points);
+    board.add(this.points);
   }
 
   emit(x, y, z, color, count = 12, speed = 3, life = 0.6) {
@@ -360,6 +365,8 @@ const hud = {
   score: [$("score0"), $("score1")],
   name: [$("name0"), $("name1")],
   chips: [$("chips0"), $("chips1")],
+  meter: [$("meter0"), $("meter1")],
+  meterBox: [$("meterbox0"), $("meterbox1")],
   banner: $("banner"),
   toast: $("toast"),
 };
@@ -383,6 +390,10 @@ function updateHud() {
     hud.score[1].textContent = game.score[1];
   }
   hud.banner.textContent = !game.over && game.balls.length === 0 ? "Get ready!" : "";
+  for (let p = 0; p < 2; p++) {
+    hud.meter[p].style.width = `${Math.round(game.meter[p] * 100)}%`;
+    hud.meterBox[p].classList.toggle("locked", game.tiltLocked[p]);
+  }
 
   // One chip per running power-up, on the side of the player it affects.
   for (let p = 0; p < 2; p++) {
@@ -419,6 +430,7 @@ function syncScene(time, dt) {
   if (!game) {
     for (const m of ballMeshes) m.visible = false;
     ballLight.visible = false;
+    board.rotation.set(0, 0, 0);
     return;
   }
   for (let p = 0; p < 2; p++) {
@@ -438,7 +450,7 @@ function syncScene(time, dt) {
   while (ballMeshes.length < game.balls.length) {
     const m = new THREE.Mesh(ballGeometry, ballMaterial);
     m.castShadow = true;
-    scene.add(m);
+    board.add(m);
     ballMeshes.push(m);
   }
   ballMeshes.forEach((m, i) => {
@@ -472,6 +484,10 @@ function syncScene(time, dt) {
     m.scale.setScalar(portals.left > 2 ? 1 + Math.sin(time * 6) * 0.05 : 0.7 + Math.sin(time * 20) * 0.1);
   });
   syncItems(game, time);
+
+  // Tilt: the side the ball is rolling towards dips down (positive x / z = right / towards you).
+  board.rotation.z = -game.tilt.x * MAX_TILT_ANGLE;
+  board.rotation.x = game.tilt.z * MAX_TILT_ANGLE;
 
   shake.power = Math.max(0, shake.power - dt * 2.2);
   const s = shake.power * 0.25;
@@ -556,17 +572,18 @@ function axis(neg, pos) {
 
 function readInput() {
   gamepad.poll();
-  const input = { move: [0, 0], release: [false, false] };
-  const w = ["KeyW"], s = ["KeyS"], up = ["ArrowUp"], down = ["ArrowDown"];
+  const input = { move: [0, 0], release: [false, false], tilt: [[0, 0], [0, 0]] };
   if (view.mode === "ai") {
-    input.move[0] = axis([...w, ...up], [...s, ...down]);
+    input.move[0] = axis(["KeyW"], ["KeyS"]);
     input.release[0] = keys.has("Space") || keys.has("Enter");
   } else {
-    input.move[0] = axis(w, s);
-    input.move[1] = axis(up, down);
+    input.move[0] = axis(["KeyW"], ["KeyS"]);
+    input.move[1] = axis(["KeyI"], ["KeyK"]);
     input.release[0] = keys.has("Space");
     input.release[1] = keys.has("Enter");
   }
+  // Arrow keys tilt the board (in two-player mode both players share them).
+  input.tilt[0] = [axis(["ArrowLeft"], ["ArrowRight"]), axis(["ArrowUp"], ["ArrowDown"])];
   if (gamepad.connected) {
     const stick = gamepad.move.y;
     const dpad = (gamepad.down.has(BUTTON.DOWN) ? 1 : 0) - (gamepad.down.has(BUTTON.UP) ? 1 : 0);
@@ -574,6 +591,8 @@ function readInput() {
     if (gamepad.down.has(BUTTON.CROSS) || gamepad.down.has(BUTTON.R1) || gamepad.down.has(BUTTON.R2)) {
       input.release[0] = true;
     }
+    // The right stick tilts the board.
+    if (input.tilt[0][0] === 0 && input.tilt[0][1] === 0) input.tilt[0] = [gamepad.look.x, gamepad.look.y];
     if (gamepad.pressed.has(BUTTON.OPTIONS)) togglePause();
   }
   for (let side = 0; side < 2; side++) {
@@ -618,7 +637,7 @@ for (const type of ["pointerup", "pointercancel"]) {
   });
 }
 
-const GAME_KEYS = new Set(["KeyW", "KeyS", "ArrowUp", "ArrowDown", "Space", "Enter"]);
+const GAME_KEYS = new Set(["KeyW", "KeyS", "KeyI", "KeyK", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter"]);
 window.addEventListener("keydown", (e) => {
   if (e.target instanceof HTMLInputElement) return;      // typing a nickname
   if (e.code === "KeyM") { sfx.muted = !sfx.muted; showToast(sfx.muted ? "Sound off" : "Sound on", "#ffffff"); return; }
@@ -672,8 +691,8 @@ function startMatch() {
   showPanel(null);
   $("hud").hidden = false;
   $("hint").textContent = view.mode === "ai"
-    ? "W / S or ↑ / ↓ move · Space lets go of the magnet · P pause · M sound · or drag with the mouse or a finger"
-    : "Player 1: W / S (Space)   ·   Player 2: ↑ / ↓ (Enter)   ·   P pause";
+    ? "W / S move · ← ↑ ↓ → tilt the board · Space lets go of the magnet · P pause · M sound"
+    : "Player 1: W / S (Space) · Player 2: I / K (Enter) · ← ↑ ↓ → tilt the board for both · P pause";
   document.activeElement?.blur();
 }
 
@@ -806,6 +825,7 @@ function simulate(dt) {
     const ai = aiInput(game, 1, view.level, aiMem, dt);
     input.move[1] = ai.move;
     input.release[1] = ai.release;
+    input.tilt[1] = ai.tilt;
   }
   step(game, dt, input);
   handleEvents();
