@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Fire Pong</title>
+  <meta name="description" content="Pong with power-ups, on Tripp's Fire Raze engine.">
+  <meta name="theme-color" content="#06070c">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2306070c'/%3E%3Crect x='4' y='9' width='3' height='14' fill='%234cc9f0'/%3E%3Crect x='25' y='12' width='3' height='14' fill='%23ff8c1a'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+  <canvas id="scene" aria-label="Pong table"></canvas>
+
+  <div id="hud" hidden>
+    <div id="scores" aria-live="polite">
+      <div class="side" id="side0"><span class="name" id="name0">YOU</span><span class="score" id="score0">0</span><div class="chips" id="chips0"></div></div>
+      <div class="side" id="side1"><span class="name" id="name1">COMPUTER</span><span class="score" id="score1">0</span><div class="chips" id="chips1"></div></div>
+    </div>
+    <p id="banner" aria-live="polite"></p>
+    <p id="toast" aria-live="polite"></p>
+    <p id="hint"></p>
+  </div>
+
+  <section id="start" class="panel">
+    <p class="kicker">Fire Raze engine</p>
+    <h1>Fire Pong</h1>
+    <p>Pong, but things appear on the table. Hit the ball into a power-up and <strong>you</strong> get it, if you hit the ball last. First to 7 wins.</p>
+    <div class="row">
+      <label for="level">Computer is</label>
+      <select id="level">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+      </select>
+      <label class="check"><input type="checkbox" id="powerups-on" checked> Power-ups</label>
+    </div>
+    <div class="row">
+      <button id="play-ai" class="big">Play the computer</button>
+      <button id="play-local" class="big secondary">Two players</button>
+    </div>
+    <p id="powerup-status" class="error" role="status"></p>
+    <details>
+      <summary>What do the power-ups do?</summary>
+      <ul id="powerup-list" class="powerup-list"><li>Loading…</li></ul>
+    </details>
+    <h2>Best wins</h2>
+    <ol id="leaderboard" class="leaderboard"><li>Loading…</li></ol>
+    <p class="small">Controls: W / S or ↑ / ↓ · drag with a mouse or finger · or use a game controller. P pauses, M turns sound off.</p>
+  </section>
+
+  <section id="pause" class="panel" hidden>
+    <h1>Paused</h1>
+    <div class="row">
+      <button id="resume-btn" class="big">Resume</button>
+      <button id="menu-btn" class="big secondary">Menu</button>
+    </div>
+  </section>
+
+  <section id="end" class="panel" hidden>
+    <h1 id="end-title">You win!</h1>
+    <p class="final" id="end-score"></p>
+    <form id="name-form">
+      <label for="name">Nickname for the leaderboard (no real full names!)</label>
+      <input id="name" maxlength="12" autocomplete="off" required pattern="[A-Za-z0-9][A-Za-z0-9 _\-]*">
+      <button class="big" type="submit">Save my win</button>
+      <p id="name-error" class="error" role="alert"></p>
+    </form>
+    <div class="row">
+      <button id="again-btn" class="big">Play again</button>
+      <button id="end-menu-btn" class="big secondary">Menu</button>
+    </div>
+    <h2>Best wins</h2>
+    <ol id="end-leaderboard" class="leaderboard"><li>Loading…</li></ol>
+  </section>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

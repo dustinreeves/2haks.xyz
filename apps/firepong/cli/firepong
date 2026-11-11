@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""firepong: look at Fire Pong power-ups and the leaderboard.
+
+  firepong powerups             power-ups on the live server
+  firepong show <id>            one power-up's details
+  firepong leaderboard          best wins against the computer
+  firepong validate             check content/powerups/*.json for mistakes (run before committing one)
+
+powerups / show / leaderboard use the API (FIREPONG_API, default https://firepong.2haks.xyz).
+validate reads the folder (FIREPONG_POWERUPS, default <repo>/content/powerups).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(os.path.realpath(__file__)).parent.parent
+sys.path.insert(0, str(ROOT / "api"))
+
+from app.powerups import PowerupError, load_powerups  # noqa: E402
+
+DEFAULT_API = os.environ.get("FIREPONG_API", "https://firepong.2haks.xyz").rstrip("/")
+DEFAULT_POWERUPS = Path(os.environ.get("FIREPONG_POWERUPS", ROOT / "content" / "powerups"))
+
+
+class CliError(Exception):
+    pass
+
+
+def call(api: str, path: str):
+    req = urllib.request.Request(api + "/api" + path, headers={"User-Agent": "firepong-cli/1"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.load(e).get("detail", e.reason)
+        except (ValueError, AttributeError):
+            detail = e.reason
+        raise CliError(f"{e.code}: {detail}") from e
+    except urllib.error.URLError as e:
+        raise CliError(f"can't reach {api}: {e.reason}") from e
+
+
+def cmd_powerups(args) -> None:
+    for p in call(args.api, "/powerups")["powerups"]:
+        print(f"{p['id']:<12} {p['name']:<12} {p['duration']:>4g}s  {p['description']}")
+
+
+def cmd_show(args) -> None:
+    p = call(args.api, f"/powerups/{args.id}")
+    for key in ("id", "name", "description", "effect", "color", "duration", "weight", "amount"):
+        print(f"{key:<12} {p[key]}")
+
+
+def cmd_leaderboard(args) -> None:
+    rows = call(args.api, f"/leaderboard?limit={args.limit}")["leaderboard"]
+    if not rows:
+        print("No wins yet. Be the first!")
+        return
+    for r in rows:
+        extras = "" if r["powerups"] else "  (no power-ups)"
+        print(f"{r['rank']:>2}. {r['name']:<12} {r['score']:>4}  {r['difficulty']:<6} {r['seconds']:>6.1f}s{extras}")
+
+
+def cmd_validate(args) -> None:
+    try:
+        found = load_powerups(args.folder)
+    except PowerupError as e:
+        raise CliError(str(e)) from e
+    print(f"OK: {len(found)} power-ups ({', '.join(p['id'] for p in found)})")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="firepong", description=__doc__.split("\n")[0])
+    parser.add_argument("--api", default=DEFAULT_API, help="API address (default %(default)s)")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("powerups", help="list power-ups").set_defaults(func=cmd_powerups)
+    p = sub.add_parser("show", help="show one power-up")
+    p.add_argument("id")
+    p.set_defaults(func=cmd_show)
+    p = sub.add_parser("leaderboard", help="best wins")
+    p.add_argument("--limit", type=int, default=10)
+    p.set_defaults(func=cmd_leaderboard)
+    p = sub.add_parser("validate", help="check power-up files")
+    p.add_argument("--folder", type=Path, default=DEFAULT_POWERUPS)
+    p.set_defaults(func=cmd_validate)
+    args = parser.parse_args(argv)
+    try:
+        args.func(args)
+    except CliError as e:
+        print(f"firepong: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

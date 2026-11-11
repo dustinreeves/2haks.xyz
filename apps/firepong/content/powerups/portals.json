@@ -1,0 +1,10 @@
+{
+  "id": "portals",
+  "name": "Portals",
+  "description": "A blue and an orange portal open. Balls hop between them.",
+  "effect": "portals",
+  "color": "#ff9d00",
+  "duration": 9,
+  "weight": 2,
+  "amount": 1
+}

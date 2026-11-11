@@ -1,0 +1,10 @@
+{
+  "id": "tiny_foe",
+  "name": "Tiny Foe",
+  "description": "The other paddle shrinks to a little stick.",
+  "effect": "tiny_foe",
+  "color": "#ff4d6d",
+  "duration": 8,
+  "weight": 3,
+  "amount": 0.55
+}

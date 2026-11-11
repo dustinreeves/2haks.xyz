@@ -1,0 +1,10 @@
+{
+  "id": "magnet",
+  "name": "Magnet",
+  "description": "Your paddle catches the ball twice. Aim, then let go!",
+  "effect": "magnet",
+  "color": "#e0e0e0",
+  "duration": 14,
+  "weight": 2,
+  "amount": 2
+}

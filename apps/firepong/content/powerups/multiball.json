@@ -1,0 +1,10 @@
+{
+  "id": "multiball",
+  "name": "Multiball",
+  "description": "Two extra balls appear. Only the main ball scores.",
+  "effect": "multiball",
+  "color": "#f9c80e",
+  "duration": 0,
+  "weight": 2,
+  "amount": 2
+}

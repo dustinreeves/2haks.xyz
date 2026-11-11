@@ -1,0 +1,13 @@
+
+firepong.2haks.xyz {
+	encode zstd gzip
+	handle /api/* {
+		request_body {
+			max_size 8KB
+		}
+		reverse_proxy 127.0.0.1:8902
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8901
+	}
+}

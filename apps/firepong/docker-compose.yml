@@ -1,0 +1,58 @@
+# Fire Pong: https://firepong.2haks.xyz
+# Caddy runs on the host, so each service publishes on 127.0.0.1 only.
+# (Docker-published ports skip UFW, so never publish on 0.0.0.0.)
+
+name: firepong
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  networks: [web-proxy]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  api:
+    <<: *hardening
+    build: ./api
+    image: firepong-api:local
+    environment:
+      POWERUPS_DIR: /content/powerups
+      FIREPONG_DB: /var/lib/firepong/firepong.db
+    volumes:
+      # Mount the folder, not the file, so edits that replace a file are seen.
+      - ./content:/content:ro
+      # SQLite database (leaderboard). Owned by uid 10001 on the host.
+      - ./data:/var/lib/firepong
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8902:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    <<: *hardening
+    build: ./web
+    image: firepong-web:local
+    tmpfs: [/tmp]
+    ports:
+      - "127.0.0.1:8901:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  web-proxy:
+    external: true

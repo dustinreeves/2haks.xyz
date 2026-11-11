@@ -1,0 +1,10 @@
+{
+  "id": "big_paddle",
+  "name": "Big Paddle",
+  "description": "Your paddle grows 60% longer for a while.",
+  "effect": "big_paddle",
+  "color": "#3ddc84",
+  "duration": 9,
+  "weight": 4,
+  "amount": 1.6
+}

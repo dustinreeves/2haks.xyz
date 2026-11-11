@@ -1,0 +1,10 @@
+{
+  "id": "slow_mo",
+  "name": "Slow-Mo",
+  "description": "Every ball slows right down. Lots of time to think!",
+  "effect": "slow_mo",
+  "color": "#4cc9f0",
+  "duration": 6,
+  "weight": 3,
+  "amount": 0.5
+}

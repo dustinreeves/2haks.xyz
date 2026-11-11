@@ -1,0 +1,10 @@
+{
+  "id": "shield",
+  "name": "Shield",
+  "description": "A glowing wall behind you blocks the next goal.",
+  "effect": "shield",
+  "color": "#b388ff",
+  "duration": 15,
+  "weight": 3,
+  "amount": 1
+}

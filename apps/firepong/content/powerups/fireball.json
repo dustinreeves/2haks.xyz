@@ -1,0 +1,10 @@
+{
+  "id": "fireball",
+  "name": "Fireball",
+  "description": "The ball catches fire and zooms 50% faster.",
+  "effect": "fireball",
+  "color": "#ff8c1a",
+  "duration": 6,
+  "weight": 3,
+  "amount": 1.5
+}

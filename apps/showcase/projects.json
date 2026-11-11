@@ -165,6 +165,25 @@
           "tripps order Sam -w 2 -d 1"
         ]
       }
+    },
+    {
+      "slug": "firepong",
+      "name": "Fire Pong",
+      "launch_date": "2026-11-10",
+      "url": "https://firepong.2haks.xyz",
+      "description": "Pong with power-ups on Tripp's own Fire Raze engine: bigger paddles, multiball, shields, magnets and portals pop up on the table. Play the computer or a friend, and put your wins on the leaderboard.",
+      "author": "Tripp",
+      "examples": {
+        "api": [
+          "curl https://firepong.2haks.xyz/api/powerups",
+          "curl https://firepong.2haks.xyz/api/leaderboard"
+        ],
+        "cli": [
+          "firepong powerups",
+          "firepong show portals",
+          "firepong leaderboard"
+        ]
+      }
     }
   ]
 }
